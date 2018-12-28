@@ -126,7 +126,11 @@ ui <- fluidPage(
        selectizeInput("orgs",
                        "Select organization",
                        choices = organization,
-                       multiple = TRUE)
+                       multiple = TRUE),
+       #Reject button
+       checkboxInput("Reject",
+                     label = "Keep Rejected data",
+                     value = FALSE)
         ),
 
 
@@ -179,7 +183,7 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
      organiz <- toString(sprintf("'%s'", input$orgs))
 
      # Begin the query 
-     qry <- "AWQMS_Data("
+     qry <- "NPDES_AWQMS_Qry("
 
   
   # Add parameters to query - 
@@ -276,6 +280,23 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
        
      }
      
+     #reject filter
+     
+     if(input$Reject) {
+       
+       if(length(input$startd) > 0 |
+          length(input$endd) > 0|
+          length(input$monlocs) > 0|
+          length(input$characteristics) > 0|
+          length(input$huc8_nms) > 0|
+          length(input$orgs) > 0){
+         qry <- paste0(qry, ", ")
+       }
+       
+       qry <- paste0(qry,"reject = TRUE")  
+       
+     }
+     
      qry <- paste0(qry, ")")
 
 
@@ -300,12 +321,14 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
    rorganiz<-reactive({if(length(input$orgs) > 0) {toString(sprintf("'%s'", input$orgs))} else {NULL}})
    rstdt<-reactive({input$startd})
    rendd<-reactive({input$endd})
+   rrej<-reactive({if(input$Reject) {TRUE} else {FALSE} })
+   
    #try dat with just start and end date, see if any data is returned
    #none yet, maybe it needs time? give it a few more minutes
    #nope, it isn't returning anything.....
    #we may need to scrap the function and go with a straight ODBC connection and pull from AWQMS....
-   dat<-reactive({AWQMS_Data(startdate=rstdt(),enddate=rendd(),media=c('Water'),station=c(rstats()),
-   char=c(rvals()),org=c(rorganiz()),HUC8=c(rhuc8s()),filterQC=TRUE)})
+   dat<-reactive({NPDES_AWQMS_Qry(startdate=rstdt(),enddate=rendd(),station=c(rstats()),
+                  char=c(rvals()),org=c(rorganiz()),HUC8_Name=c(rhuc8s()),reject=rrej())})
    
 output$table<-renderTable({dat()})
 
