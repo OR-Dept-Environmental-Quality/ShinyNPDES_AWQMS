@@ -133,6 +133,8 @@ ui <- fluidPage(
 
 # Define server logic required to display query
 server <- function(input, output) {
+
+#checks to see what exactly is getting put out  
 output$sc1<- renderText({if(length(input$monlocs) > 0)
   {toString(sprintf("'%s'", input$monlocs))} else {NULL}})
   
@@ -290,33 +292,35 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
    
    #still having error: cannot coerce type 'closure' to vector of type 'character'
    
-#newdata<-reactive({data<-AWQMS_Data(rstdt(),rendd(),rstats(),rproj_select(),rvals(),media='Water',rorganiz(),rhuc8s(),filterQC=TRUE)})
 
-output$table<-renderTable({
+##make data reactive --definitely runs faster now
+   rstats<-reactive({if(length(input$monlocs) > 0) {toString(sprintf("'%s'", input$monlocs))} else {NULL}})
+   rvals<- reactive({if(length(input$characteristics) > 0) {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
+   rproj_select<-reactive({if(length(input$projs) > 0) {toString(sprintf("'%s'", input$projs))} else {NULL}})
+   rhuc8s<-reactive({if(length(input$huc8_nms) > 0) {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
+   rorganiz<-reactive({if(length(input$orgs) > 0) {toString(sprintf("'%s'", input$orgs))} else {NULL}})
+   rstdt<-reactive({input$startd})
+   rendd<-reactive({input$endd})
+   #try dat with just start and end date, see if any data is returned
+   #none yet, maybe it needs time? give it a few more minutes
+   #nope, it isn't returning anything.....
+   #we may need to scrap the function and go with a straight ODBC connection and pull from AWQMS....
+   dat<-reactive({AWQMS_Data(startdate=rstdt(),enddate=rendd(),media=c('Water'))})
+                             #,station=c(rstats()),project=c(rproj_select()),
+                   #char=c(rvals()),media=c('Water'),org=c(rorganiz()),HUC8=c(rhuc8s()),filterQC=TRUE)})
+   
+output$table<-renderTable({dat()})
 
-  rstats<-if(length(input$monlocs) > 0) {toString(sprintf("'%s'", input$monlocs))} else {NULL}
-  rvals<- if(length(input$characteristics) > 0) {toString(sprintf("'%s'", input$characteristics))} else {NULL}
-  rproj_select<-if(length(input$projs) > 0) {toString(sprintf("'%s'", input$projs))} else {NULL}
-  rhuc8s<-if(length(input$huc8_nms) > 0) {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}
-  rorganiz<-if(length(input$orgs) > 0) {toString(sprintf("'%s'", input$orgs))} else {NULL}
-  
-  dat<-AWQMS_Data(startdate=input$startd,enddate=input$endd,station=c(rstats),project=c(rproj_select),
-                   char=c(rvals),media=c('Water'),org=c(rorganiz),HUC8=c(rhuc8s),filterQC=TRUE)
-  dat
-
-  })
-
-#have to make the data itself a reactive expression for this to work
+#only works in Chrome- and I have verified that it downloads a file with the headers and no data
+#the problem is with the query not pulling anything
 output$downloadData <- downloadHandler(
   
-  filename = function() { 
-    paste("dataset-", Sys.Date(), ".csv", sep="")
-  },
-  content = function(file) {
-    write.csv(dat, file)
-  })
+  filename = function() {paste("dataset-", Sys.Date(), ".csv", sep="")},
+  content = function(file) {write.csv(dat(), file,row.names = FALSE)})
 
 }
 # Run the application
 shinyApp(ui = ui, server = server)
 
+#make sure you do runApp(launch.browser=TRUE) if you want to download-
+#only works in Chrome
