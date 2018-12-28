@@ -96,7 +96,7 @@ ui <- fluidPage(
         dateInput("startd",
                   label = "Select Start Date",
                   min = '1949-09-15',
-                  value = '2010-01-01'
+                  value = '2000-01-01'
                   ),
 
         # End date
@@ -136,7 +136,7 @@ ui <- fluidPage(
 
      # Setup main panel
        mainPanel(
-        h1("AWQMS_Data() Builder"),
+        h1("AWQMS Data Builder"),
         h5("Select parameters on left to build data retrieval function"),
         #tags$br(),
         h5("Copy and paste function below into a different R session"),
@@ -231,23 +231,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
        qry <- paste0(qry,"char = c(",vals,") "  )
 
      }
-
-  #sample media
-     #sample media
-     {
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0|
-          length(input$characteristics) > 0|
-          length(input$stat_basis) > 0){
-         qry <- paste0(qry, ", ")
-       }
-       
-       qry <- paste0(qry,"media = c('Water') "  )  
-       
-     }
-       
-
 
  #HUC8s
      if(length(input$huc8_nms) > 0){
