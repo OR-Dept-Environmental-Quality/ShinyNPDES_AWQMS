@@ -14,20 +14,52 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 
+#Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
+#plus, for NPDES only need a subset of data- 
+#the function NPDES_AWQMS_Qry will only pull water data since the year 2000 from a select set of monloc types
+
+#right now this is sourced, but will likely change it so that it is part of it's own library that gets pulled in at the beginning
+source("NPDES_AWQMSQuery.R")
 
 # Query out the valid values ---------------------------------------------
 
-chars <- AWQMS_Chars()
-chars <- chars$Char_Name
-chars <- sort(chars)
+#NPDES only needs a limited # of Chars, this should help speed up the program
 
-station <- AWQMS_Stations()
+chars <- c(".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ",
+          ".delta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ","1,1,2-Trichloroethane ",
+          "1,1-Dichloroethane ","1,1-Dichloroethylene ","1,2,4,5-Tetrachlorobenzene ","1,2,4-Trichlorobenzene ","1,2-Dichloroethane ",
+          "1,2-Dichloropropane ","1,2-Diphenylhydrazine ","1,3-Dichloropropene","2,3,7,8-Tetrachlorodibenzo-p-dioxin ",
+          "2,4,5-Trichlorophenol ","2,4,6-Trichlorophenol ","2,4-D ","2,4-Dichlorophenol ","2,4-Dimethylphenol ","2,4-Dinitrophenol ",
+          "2,4-Dinitrotoluene ","2,6-Dinitrotoluene ","2-Chloroethyl vinyl ether ","2-Chloronaphthalene ","3,3'-Dichlorobenzidine ",
+          "4,6-Dinitro-o-cresol ","Acenaphthene ","Acenaphthylene ","Acrolein ","Aldrin ","Allyl chloride ","Ammonia and ammonium",
+          "Ammonia-nitrogen","Anthracene ","Antimony ","Aroclor 1016 ","Aroclor 1221 ","Aroclor 1232 ","Aroclor 1242 ",
+          "Aroclor 1248 ","Aroclor 1254 ","Aroclor 1260 ","Arsenic ","Arsenic, Inorganic","Azinphos-methyl ","Azobenzene ",
+          "Barium ","Benz[a]anthracene ","Benzene ","Benzene Hexachloride, Beta (BHC)","Benzene Hexachloride, Delta (BHC)",
+          "Benzidine ","Benzo(b)fluoranthene ","Benzo[a]pyrene ","Benzo[ghi]perylene ","Benzo[k]fluoranthene ","Beryllium ",
+          "Bis(2-chloro-1-methylethyl) ether ","Bis(2-chloroethoxy)methane ","Bis(2-chloroethyl) ether ","Bis(chloromethyl) ether",
+          "Butyl benzyl phthalate ","Cadmium ","Carbon tetrachloride ","Chlordane ","Chlordane, technical, and/or chlordane metabolites",
+          "Chlorobenzene ","Chlorodibromomethane ","Chloroethane ","Chloroform ","Chloromethane","Chlorpyrifos ","Chromium ",
+          "Chromium(III)","Chromium(VI) ","Chrysene ","Copper ","Cyanide ","Demeton ","Di(2-ethylhexyl) phthalate ",
+          "Dibenz[a,h]anthracene ","Dibutyl phthalate ","Dichlorobromomethane ","Dieldrin ","Diethyl phthalate ","Dimethyl phthalate ",
+          "Di-n-octyl phthalate ","Dioxins and furans as 2,3,7,8-TCDD TEQs","Endosulfan ","Endosulfan sulfate ","Endrin ",
+          "Endrin aldehyde ","Ethylbenzene ","Fluoranthene ","Fluorene ","Hardness, Ca, Mg","Hardness, carbonate",
+          "Hardness, non-carbonate","Heptachlor ","Heptachlor epoxide ","Hexachlorobenzene ","Hexachlorobutadiene ",
+          "Hexachlorocyclopentadiene ","Hexachloroethane ","Hydrogen sulfide","Indeno[1,2,3-cd]pyrene ",
+          "Inorganic nitrogen (nitrate and nitrite)","Inorganic phosphorus","Iron ","Isophorone ","Lead ","Lindane ","Malathion ",
+          "Manganese ","m-Dichlorobenzene ","Mercury ","Methoxychlor ","Methyl bromide ","Methylene chloride ","Methylmercury(1+) ",
+          "Mirex ","Naphthalene ","Nickel ","Nitrate ","Nitrate + Nitrite","Nitrobenzene ","Nitrosamine","N-Nitrosodiethylamine",
+          "N-Nitrosodiethylamine ","N-Nitrosodimethylamine ","N-Nitrosodi-n-butylamine ","N-Nitrosodi-n-propylamine ",
+          "N-Nitrosodiphenylamine ","N-Nitrosopyrrolidine ","o-Chlorophenol ","o-Dichlorobenzene ","o-Nitrophenol ","p,p'-DDD ",
+          "p,p'-DDE ","p,p'-DDT ","Parathion ","p-Bromophenyl phenyl ether ","p-Chloro-m-cresol ","p-Chlorophenyl phenyl ether ",
+          "p-Dichlorobenzene ","Pentachlorobenzene ","Pentachlorophenol ","pH","Phenanthrene ","Phenol ","Phenols","Phosphorus ",
+          "p-Nitrophenol ","Polychlorinated biphenyls ","Pyrene ","Selenium ","Silver ","Silvex ","Temperature, water",
+          "Tetrachloroethene ","Tetrachloroethylene ","Thallium ","Toluene ","Total hardness","Total PCBs","Toxaphene ",
+          "trans-1,2-Dichloroethylene ","Tribromomethane ","Tributlytin ","Tributyltin ","Trichloroethene (TCE) ",
+          "Turbidity","Turbidity Field","Vinyl chloride ","Zinc ")
+
+station <- NPDES_AWQMS_Stations()
 station <- station$MLocID
 station <- sort(station)
-
-projects <- AWQMS_Projects()
-projects <- projects$Project
-projects <- sort(projects)
 
 organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
@@ -64,7 +96,7 @@ ui <- fluidPage(
         dateInput("startd",
                   label = "Select Start Date",
                   min = '1949-09-15',
-                  value = '2010-01-01'
+                  value = '2000-01-01'
                   ),
 
         # End date
@@ -84,32 +116,27 @@ ui <- fluidPage(
                         choices = station,
                         multiple = TRUE),
 
-
-       # Projects 
-       selectizeInput("projs",
-                       "Select Projects",
-                       choices = projects,
-                       multiple = TRUE),
-
        # huc8 names 
        selectizeInput("huc8_nms",
                        "Select HUC 8",
                        choices = HUC8_Names,
                        multiple = TRUE),
         
-        
        #Orgs
        selectizeInput("orgs",
                        "Select organization",
                        choices = organization,
-                       multiple = TRUE)
-
+                       multiple = TRUE),
+       #Reject button
+       checkboxInput("Reject",
+                     label = "Keep Rejected data",
+                     value = FALSE)
         ),
 
 
      # Setup main panel
        mainPanel(
-        h1("AWQMS_Data() Builder"),
+        h1("AWQMS Data Builder"),
         h5("Select parameters on left to build data retrieval function"),
         #tags$br(),
         h5("Copy and paste function below into a different R session"),
@@ -121,7 +148,6 @@ ui <- fluidPage(
         textOutput("selected_chars"),
         textOutput("sc1"),
         textOutput("sc2"),
-        textOutput("sc3"),
         textOutput("sc4"),
         textOutput("sc5"),
         # Aliana attempting to add table of data
@@ -141,9 +167,6 @@ output$sc1<- renderText({if(length(input$monlocs) > 0)
 output$sc2<- renderText({if(length(input$characteristics) > 0)  
                   {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
 
-output$sc3<- renderText({if(length(input$projs) > 0) 
-  {toString(sprintf("'%s'", input$projs))} else {NULL}})
-
 output$sc4<- renderText({if(length(input$huc8_nms) > 0)
   {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
 
@@ -156,12 +179,11 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
      # Convert all field entries to strings of vectors - This allows their use in the query
      stats <- toString(sprintf("'%s'", input$monlocs))
      vals <- toString(sprintf("'%s'", input$characteristics))
-     proj_select <-toString(sprintf("'%s'", input$projs))
      huc8s <-toString(sprintf("'%s'", input$huc8_nms))
      organiz <- toString(sprintf("'%s'", input$orgs))
 
      # Begin the query 
-     qry <- "AWQMS_Data("
+     qry <- "NPDES_AWQMS_Qry("
 
   
   # Add parameters to query - 
@@ -210,38 +232,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
 
      }
 
-  #projects
-     if(length(input$projs) > 0){
-
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0|
-          length(input$characteristics) > 0){
-         qry <- paste0(qry, ", ")
-       }
-
-       qry <- paste0(qry,"project = c(",proj_select,") "  )
-
-     }
-
-  #sample media
-     #sample media
-     {
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0|
-          length(input$characteristics) > 0|
-          length(input$stat_basis) > 0|
-          length(input$projs) > 0){
-         qry <- paste0(qry, ", ")
-       }
-       
-       qry <- paste0(qry,"media = c('Water') "  )  
-       
-     }
-       
-
-
  #HUC8s
      if(length(input$huc8_nms) > 0){
 
@@ -249,7 +239,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
           length(input$endd) > 0|
           length(input$monlocs) > 0|
           length(input$characteristics) > 0|
-          length(input$projs) > 0|
           length(input$samp_med) > 0){
          qry <- paste0(qry, ", ")
        }
@@ -265,7 +254,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
           length(input$endd) > 0|
           length(input$monlocs) > 0|
           length(input$characteristics) > 0|
-          length(input$projs) > 0|
           length(input$samp_med) > 0|
           length(input$huc8_nms) > 0){
          qry <- paste0(qry, ", ")
@@ -275,7 +263,23 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
        
      }
      
-
+     #reject filter
+     
+     if(input$Reject) {
+       
+       if(length(input$startd) > 0 |
+          length(input$endd) > 0|
+          length(input$monlocs) > 0|
+          length(input$characteristics) > 0|
+          length(input$huc8_nms) > 0|
+          length(input$orgs) > 0){
+         qry <- paste0(qry, ", ")
+       }
+       
+       qry <- paste0(qry,"reject = TRUE")  
+       
+     }
+     
      qry <- paste0(qry, ")")
 
 
@@ -296,18 +300,18 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
 ##make data reactive --definitely runs faster now
    rstats<-reactive({if(length(input$monlocs) > 0) {toString(sprintf("'%s'", input$monlocs))} else {NULL}})
    rvals<- reactive({if(length(input$characteristics) > 0) {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
-   rproj_select<-reactive({if(length(input$projs) > 0) {toString(sprintf("'%s'", input$projs))} else {NULL}})
    rhuc8s<-reactive({if(length(input$huc8_nms) > 0) {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
    rorganiz<-reactive({if(length(input$orgs) > 0) {toString(sprintf("'%s'", input$orgs))} else {NULL}})
    rstdt<-reactive({input$startd})
    rendd<-reactive({input$endd})
+   rrej<-reactive({if(input$Reject) {TRUE} else {FALSE} })
+   
    #try dat with just start and end date, see if any data is returned
    #none yet, maybe it needs time? give it a few more minutes
    #nope, it isn't returning anything.....
    #we may need to scrap the function and go with a straight ODBC connection and pull from AWQMS....
-   dat<-reactive({AWQMS_Data(startdate=rstdt(),enddate=rendd(),media=c('Water'))})
-                             #,station=c(rstats()),project=c(rproj_select()),
-                   #char=c(rvals()),media=c('Water'),org=c(rorganiz()),HUC8=c(rhuc8s()),filterQC=TRUE)})
+   dat<-reactive({NPDES_AWQMS_Qry(startdate=rstdt(),enddate=rendd(),station=c(rstats()),
+                  char=c(rvals()),org=c(rorganiz()),HUC8_Name=c(rhuc8s()),reject=rrej())})
    
 output$table<-renderTable({dat()})
 
