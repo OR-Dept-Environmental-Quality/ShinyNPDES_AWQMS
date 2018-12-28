@@ -130,7 +130,9 @@ ui <- fluidPage(
        #Reject button
        checkboxInput("Reject",
                      label = "Keep Rejected data",
-                     value = FALSE)
+                     value = FALSE),
+       #add action button, idea is to not run query until the button is clicked)
+       actionButton("goButton","Run Query")
         ),
 
 
@@ -285,19 +287,11 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
 
 })
    #table of queried data
-   #likely can't just put qry in expectin it to run, will likely have to make it more reactive than that
-   #qry is text, need to actually evaluate the statement and then render the Table
-   #need to use Travis' code above, but instead of outputting to a text query, have it evaluate 
-   #within the AWQMS_Data function
-   
-   #memory issue...can't allocate that much, which makes sense, need to find a way to get it to not 
-   #run query- or run it in SQL and not R......
-   #what if I put starting default values in that won't return anything or will return a small amount of data?
-   
-   #still having error: cannot coerce type 'closure' to vector of type 'character'
+   #need to make variables reactive and then have them be input into the query
    
 
 ##make data reactive --definitely runs faster now
+   isolate({
    rstats<-reactive({if(length(input$monlocs) > 0) {toString(sprintf("'%s'", input$monlocs))} else {NULL}})
    rvals<- reactive({if(length(input$characteristics) > 0) {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
    rhuc8s<-reactive({if(length(input$huc8_nms) > 0) {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
@@ -310,10 +304,17 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
    #none yet, maybe it needs time? give it a few more minutes
    #nope, it isn't returning anything.....
    #we may need to scrap the function and go with a straight ODBC connection and pull from AWQMS....
+   #try using an isolate function first
    dat<-reactive({NPDES_AWQMS_Qry(startdate=rstdt(),enddate=rendd(),station=c(rstats()),
                   char=c(rvals()),org=c(rorganiz()),HUC8_Name=c(rhuc8s()),reject=rrej())})
+   })
    
-output$table<-renderTable({dat()})
+output$table<-renderTable({
+  if (input$goButton==0)
+    return()
+  
+  dat()
+  })
 
 #only works in Chrome- and I have verified that it downloads a file with the headers and no data
 #the problem is with the query not pulling anything
@@ -326,5 +327,5 @@ output$downloadData <- downloadHandler(
 # Run the application
 shinyApp(ui = ui, server = server)
 
-#make sure you do runApp(launch.browser=TRUE) if you want to download-
+#make sure you do runApp(launch.browser=TRUE) or in the Run App tab, click "Run External" if you want to download-
 #only works in Chrome
