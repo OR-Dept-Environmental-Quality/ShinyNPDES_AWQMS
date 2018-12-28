@@ -17,9 +17,39 @@ library(AWQMSdata)
 
 # Query out the valid values ---------------------------------------------
 
-chars <- AWQMS_Chars()
-chars <- chars$Char_Name
-chars <- sort(chars)
+#NPDES only needs a limited # of Chars, this should help speed up the program
+
+chars <- c(".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ",
+          ".delta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ","1,1,2-Trichloroethane ",
+          "1,1-Dichloroethane ","1,1-Dichloroethylene ","1,2,4,5-Tetrachlorobenzene ","1,2,4-Trichlorobenzene ","1,2-Dichloroethane ",
+          "1,2-Dichloropropane ","1,2-Diphenylhydrazine ","1,3-Dichloropropene","2,3,7,8-Tetrachlorodibenzo-p-dioxin ",
+          "2,4,5-Trichlorophenol ","2,4,6-Trichlorophenol ","2,4-D ","2,4-Dichlorophenol ","2,4-Dimethylphenol ","2,4-Dinitrophenol ",
+          "2,4-Dinitrotoluene ","2,6-Dinitrotoluene ","2-Chloroethyl vinyl ether ","2-Chloronaphthalene ","3,3'-Dichlorobenzidine ",
+          "4,6-Dinitro-o-cresol ","Acenaphthene ","Acenaphthylene ","Acrolein ","Aldrin ","Allyl chloride ","Ammonia and ammonium",
+          "Ammonia-nitrogen","Anthracene ","Antimony ","Aroclor 1016 ","Aroclor 1221 ","Aroclor 1232 ","Aroclor 1242 ",
+          "Aroclor 1248 ","Aroclor 1254 ","Aroclor 1260 ","Arsenic ","Arsenic, Inorganic","Azinphos-methyl ","Azobenzene ",
+          "Barium ","Benz[a]anthracene ","Benzene ","Benzene Hexachloride, Beta (BHC)","Benzene Hexachloride, Delta (BHC)",
+          "Benzidine ","Benzo(b)fluoranthene ","Benzo[a]pyrene ","Benzo[ghi]perylene ","Benzo[k]fluoranthene ","Beryllium ",
+          "Bis(2-chloro-1-methylethyl) ether ","Bis(2-chloroethoxy)methane ","Bis(2-chloroethyl) ether ","Bis(chloromethyl) ether",
+          "Butyl benzyl phthalate ","Cadmium ","Carbon tetrachloride ","Chlordane ","Chlordane, technical, and/or chlordane metabolites",
+          "Chlorobenzene ","Chlorodibromomethane ","Chloroethane ","Chloroform ","Chloromethane","Chlorpyrifos ","Chromium ",
+          "Chromium(III)","Chromium(VI) ","Chrysene ","Copper ","Cyanide ","Demeton ","Di(2-ethylhexyl) phthalate ",
+          "Dibenz[a,h]anthracene ","Dibutyl phthalate ","Dichlorobromomethane ","Dieldrin ","Diethyl phthalate ","Dimethyl phthalate ",
+          "Di-n-octyl phthalate ","Dioxins and furans as 2,3,7,8-TCDD TEQs","Endosulfan ","Endosulfan sulfate ","Endrin ",
+          "Endrin aldehyde ","Ethylbenzene ","Fluoranthene ","Fluorene ","Hardness, Ca, Mg","Hardness, carbonate",
+          "Hardness, non-carbonate","Heptachlor ","Heptachlor epoxide ","Hexachlorobenzene ","Hexachlorobutadiene ",
+          "Hexachlorocyclopentadiene ","Hexachloroethane ","Hydrogen sulfide","Indeno[1,2,3-cd]pyrene ",
+          "Inorganic nitrogen (nitrate and nitrite)","Inorganic phosphorus","Iron ","Isophorone ","Lead ","Lindane ","Malathion ",
+          "Manganese ","m-Dichlorobenzene ","Mercury ","Methoxychlor ","Methyl bromide ","Methylene chloride ","Methylmercury(1+) ",
+          "Mirex ","Naphthalene ","Nickel ","Nitrate ","Nitrate + Nitrite","Nitrobenzene ","Nitrosamine","N-Nitrosodiethylamine",
+          "N-Nitrosodiethylamine ","N-Nitrosodimethylamine ","N-Nitrosodi-n-butylamine ","N-Nitrosodi-n-propylamine ",
+          "N-Nitrosodiphenylamine ","N-Nitrosopyrrolidine ","o-Chlorophenol ","o-Dichlorobenzene ","o-Nitrophenol ","p,p'-DDD ",
+          "p,p'-DDE ","p,p'-DDT ","Parathion ","p-Bromophenyl phenyl ether ","p-Chloro-m-cresol ","p-Chlorophenyl phenyl ether ",
+          "p-Dichlorobenzene ","Pentachlorobenzene ","Pentachlorophenol ","pH","Phenanthrene ","Phenol ","Phenols","Phosphorus ",
+          "p-Nitrophenol ","Polychlorinated biphenyls ","Pyrene ","Selenium ","Silver ","Silvex ","Temperature, water",
+          "Tetrachloroethene ","Tetrachloroethylene ","Thallium ","Toluene ","Total hardness","Total PCBs","Toxaphene ",
+          "trans-1,2-Dichloroethylene ","Tribromomethane ","Tributlytin ","Tributyltin ","Trichloroethene (TCE) ",
+          "Turbidity","Turbidity Field","Vinyl chloride ","Zinc ")
 
 station <- AWQMS_Stations()
 station <- station$MLocID
