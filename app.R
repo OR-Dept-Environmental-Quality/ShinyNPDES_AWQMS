@@ -14,6 +14,12 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 
+#Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
+#plus, for NPDES only need a subset of data- 
+#the function NPDES_AWQMS_Qry will only pull water data since the year 2000 from a select set of monloc types
+
+#right now this is sourced, but will likely change it so that it is part of it's own library that gets pulled in at the beginning
+source("NPDES_AWQMSQuery.R")
 
 # Query out the valid values ---------------------------------------------
 
@@ -51,13 +57,9 @@ chars <- c(".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosu
           "trans-1,2-Dichloroethylene ","Tribromomethane ","Tributlytin ","Tributyltin ","Trichloroethene (TCE) ",
           "Turbidity","Turbidity Field","Vinyl chloride ","Zinc ")
 
-station <- AWQMS_Stations()
+station <- NPDES_AWQMS_Stations()
 station <- station$MLocID
 station <- sort(station)
-
-projects <- AWQMS_Projects()
-projects <- projects$Project
-projects <- sort(projects)
 
 organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
@@ -114,26 +116,17 @@ ui <- fluidPage(
                         choices = station,
                         multiple = TRUE),
 
-
-       # Projects 
-       selectizeInput("projs",
-                       "Select Projects",
-                       choices = projects,
-                       multiple = TRUE),
-
        # huc8 names 
        selectizeInput("huc8_nms",
                        "Select HUC 8",
                        choices = HUC8_Names,
                        multiple = TRUE),
         
-        
        #Orgs
        selectizeInput("orgs",
                        "Select organization",
                        choices = organization,
                        multiple = TRUE)
-
         ),
 
 
@@ -151,7 +144,6 @@ ui <- fluidPage(
         textOutput("selected_chars"),
         textOutput("sc1"),
         textOutput("sc2"),
-        textOutput("sc3"),
         textOutput("sc4"),
         textOutput("sc5"),
         # Aliana attempting to add table of data
@@ -171,9 +163,6 @@ output$sc1<- renderText({if(length(input$monlocs) > 0)
 output$sc2<- renderText({if(length(input$characteristics) > 0)  
                   {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
 
-output$sc3<- renderText({if(length(input$projs) > 0) 
-  {toString(sprintf("'%s'", input$projs))} else {NULL}})
-
 output$sc4<- renderText({if(length(input$huc8_nms) > 0)
   {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
 
@@ -186,7 +175,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
      # Convert all field entries to strings of vectors - This allows their use in the query
      stats <- toString(sprintf("'%s'", input$monlocs))
      vals <- toString(sprintf("'%s'", input$characteristics))
-     proj_select <-toString(sprintf("'%s'", input$projs))
      huc8s <-toString(sprintf("'%s'", input$huc8_nms))
      organiz <- toString(sprintf("'%s'", input$orgs))
 
@@ -240,20 +228,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
 
      }
 
-  #projects
-     if(length(input$projs) > 0){
-
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0|
-          length(input$characteristics) > 0){
-         qry <- paste0(qry, ", ")
-       }
-
-       qry <- paste0(qry,"project = c(",proj_select,") "  )
-
-     }
-
   #sample media
      #sample media
      {
@@ -261,8 +235,7 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
           length(input$endd) > 0|
           length(input$monlocs) > 0|
           length(input$characteristics) > 0|
-          length(input$stat_basis) > 0|
-          length(input$projs) > 0){
+          length(input$stat_basis) > 0){
          qry <- paste0(qry, ", ")
        }
        
@@ -279,7 +252,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
           length(input$endd) > 0|
           length(input$monlocs) > 0|
           length(input$characteristics) > 0|
-          length(input$projs) > 0|
           length(input$samp_med) > 0){
          qry <- paste0(qry, ", ")
        }
@@ -295,7 +267,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
           length(input$endd) > 0|
           length(input$monlocs) > 0|
           length(input$characteristics) > 0|
-          length(input$projs) > 0|
           length(input$samp_med) > 0|
           length(input$huc8_nms) > 0){
          qry <- paste0(qry, ", ")
@@ -305,7 +276,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
        
      }
      
-
      qry <- paste0(qry, ")")
 
 
@@ -326,7 +296,6 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
 ##make data reactive --definitely runs faster now
    rstats<-reactive({if(length(input$monlocs) > 0) {toString(sprintf("'%s'", input$monlocs))} else {NULL}})
    rvals<- reactive({if(length(input$characteristics) > 0) {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
-   rproj_select<-reactive({if(length(input$projs) > 0) {toString(sprintf("'%s'", input$projs))} else {NULL}})
    rhuc8s<-reactive({if(length(input$huc8_nms) > 0) {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
    rorganiz<-reactive({if(length(input$orgs) > 0) {toString(sprintf("'%s'", input$orgs))} else {NULL}})
    rstdt<-reactive({input$startd})
@@ -335,9 +304,8 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
    #none yet, maybe it needs time? give it a few more minutes
    #nope, it isn't returning anything.....
    #we may need to scrap the function and go with a straight ODBC connection and pull from AWQMS....
-   dat<-reactive({AWQMS_Data(startdate=rstdt(),enddate=rendd(),media=c('Water'))})
-                             #,station=c(rstats()),project=c(rproj_select()),
-                   #char=c(rvals()),media=c('Water'),org=c(rorganiz()),HUC8=c(rhuc8s()),filterQC=TRUE)})
+   dat<-reactive({AWQMS_Data(startdate=rstdt(),enddate=rendd(),media=c('Water'),station=c(rstats()),
+   char=c(rvals()),org=c(rorganiz()),HUC8=c(rhuc8s()),filterQC=TRUE)})
    
 output$table<-renderTable({dat()})
 
