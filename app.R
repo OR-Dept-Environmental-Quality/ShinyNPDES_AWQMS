@@ -164,7 +164,6 @@ ui <- fluidPage(
 
 # Define server logic required to display query
 server <- function(input, output) {
-
   
    output$selected_chars <- renderText({
 
@@ -281,46 +280,42 @@ server <- function(input, output) {
    #all other variables are reactive 'as is' except for reject button
    #isolate data so that you have to click a button so that it runs the query the first time.
    #However, it just runs after I click it the first time, will need to tinker to get it to run only after clicking button
-   isolate({
+   data<-eventReactive(input$goButton,{
 
-   rstdt<-reactive({toString(sprintf("%s",input$startd))})
-   rendd<-reactive({toString(sprintf("%s",input$endd))})
-   rrej<-reactive({if(input$Reject) {TRUE} else {FALSE} })
+   rstdt<-toString(sprintf("%s",input$startd))
+   rendd<-toString(sprintf("%s",input$endd))
+   rrej<-if(input$Reject) {TRUE} else {FALSE} 
    
 
-   dat<-reactive({NPDES_AWQMS_Qry(startdate=rstdt(),enddate=rendd(),station=c(input$monlocs),
-                  char=c(input$characteristics),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej())})
-   
-   long<-reactive({dat()$Long_DD})
-   lat<-reactive({dat()$Lat_D})
-   mon<-reactive({dat()$MLocID})
+   dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),
+                  char=c(input$characteristics),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
+   dat
+   #long<-reactive({dat()$Long_DD})
+   #lat<-reactive({dat()$Lat_D})
+   #mon<-reactive({dat()$MLocID})
    })
 
 #table of queried data      
 output$table<-renderDataTable({
-  if (input$goButton==0)
-    return()
   
-  dat()
+  data()
   })
 
 #leaflet map
 output$locs<-renderLeaflet({
-  if (input$goButton==0)
-    return()
   
-  leaflet() %>%
+  leaflet(data()) %>%
     addTiles()%>%
-    addMarkers(lng=long(),
-               lat=lat(),
-               popup=mon())
+    addMarkers(lng=~Long_DD,
+               lat=~Lat_DD,
+               popup=~MLocID)
 })
 
 # Download button- only works in Chrome
 output$downloadData <- downloadHandler(
   
   filename = function() {paste("dataset-", Sys.Date(), ".csv", sep="")},
-  content = function(file) {write.csv(dat(), file,row.names = FALSE)})
+  content = function(file) {write.csv(data(), file,row.names = FALSE)})
 
 }
 # Run the application
