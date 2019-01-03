@@ -7,12 +7,12 @@
 
 
 ##Note- removed ability to show QC data- will not be needed for RPA analysis
-## Also removed stat basis- these are for Integrated Report, NPDES folks should calc their own stats when querying continuous data
 
 print("Initial data queries may take a few minutes.")
 
 library(shiny)
 library(AWQMSdata)
+library(leaflet)
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -24,6 +24,8 @@ source("NPDES_AWQMSQuery.R")
 # Query out the valid values ---------------------------------------------
 
 #NPDES only needs a limited # of Chars, this should help speed up the program
+#once I get a 'NPDES Parameter group' in AWQMS I should try to figure out if I can have it just query the parameter group
+#either that or I can remove the ability to search by parameter and just have it return all of them
 
 chars <- c(".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ",
           ".delta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ","1,1,2-Trichloroethane ",
@@ -115,13 +117,15 @@ ui <- fluidPage(
                         "Select Monitoring Locations",
                         choices = station,
                         multiple = TRUE),
-
+       #add warning
+       tags$em("Warning: HUC8 may not include all stations"),
+       
        # huc8 names 
        selectizeInput("huc8_nms",
                        "Select HUC 8",
                        choices = HUC8_Names,
                        multiple = TRUE),
-        
+    
        #Orgs
        selectizeInput("orgs",
                        "Select organization",
@@ -151,8 +155,14 @@ ui <- fluidPage(
         #Add break
         tags$br(),
         textOutput("selected_chars"),
+        
+        #create two panels within main panel, one for table and the other for a leaflet map
+        splitLayout(
         # Aliana added a data table
-        dataTableOutput("table")
+        dataTableOutput("table"),
+        #add leaflet map
+        leafletOutput("locs")
+        )
    )
 ))
 
@@ -270,7 +280,7 @@ server <- function(input, output) {
 
 
 })
-   #table of queried data
+   
    #have to make dates into strings, otherwise they come out as funny numbers
    #all other variables are reactive 'as is' except for reject button
    #isolate data so that you have to click a button so that it runs the query the first time.
@@ -284,9 +294,13 @@ server <- function(input, output) {
 
    dat<-reactive({NPDES_AWQMS_Qry(startdate=rstdt(),enddate=rendd(),station=c(input$monlocs),
                   char=c(input$characteristics),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej())})
+   
+   long<-reactive({dat()$Long_DD})
+   lat<-reactive({dat()$Lat_D})
+   mon<-reactive({dat()$MLocID})
    })
 
-      
+#table of queried data      
 output$table<-renderDataTable({
   if (input$goButton==0)
     return()
@@ -294,7 +308,16 @@ output$table<-renderDataTable({
   dat()
   })
 
-#only works in Chrome
+#leaflet map
+output$locs<-renderLeaflet({
+  leaflet() %>%
+    addTiles()%>%
+    addMarkers(lng=long(),
+               lat=lat(),
+               popup=mon())
+})
+
+# Download button- only works in Chrome
 output$downloadData <- downloadHandler(
   
   filename = function() {paste("dataset-", Sys.Date(), ".csv", sep="")},
