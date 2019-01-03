@@ -153,12 +153,12 @@ ui <- fluidPage(
         textOutput("selected_chars"),
         
         #create two panels within main panel, one for table and the other for a leaflet map
-       # splitLayout(
+        splitLayout(
         # Aliana added a data table
-        dataTableOutput("table")
+        dataTableOutput("table"),
         #add leaflet map
-        #leafletOutput("locs")
-       # )
+        leafletOutput("locs")
+        )
    )
 ))
 
@@ -297,29 +297,25 @@ server <- function(input, output) {
 
 #table of queried data      
 output$table<-renderDataTable({
- # if (input$goButton==0)
- #   return()
   
   data()
   })
 
 #leaflet map
-#output$locs<-renderLeaflet({
-#  if (input$goButton==0)
-#    return()
+output$locs<-renderLeaflet({
   
-#  leaflet(data()) %>%
-#    addTiles()%>%
-#    addMarkers(lng=~Long_DD,
- #              lat=~Lat_DD,
- #              popup=~MLocID)
-#})
+  leaflet(data()) %>%
+    addTiles()%>%
+    addMarkers(lng=~Long_DD,
+               lat=~Lat_DD,
+               popup=~MLocID)
+})
 
 # Download button- only works in Chrome
 output$downloadData <- downloadHandler(
   
   filename = function() {paste("dataset-", Sys.Date(), ".csv", sep="")},
-  content = function(file) {write.csv(dat(), file,row.names = FALSE)})
+  content = function(file) {write.csv(data(), file,row.names = FALSE)})
 
 }
 # Run the application
