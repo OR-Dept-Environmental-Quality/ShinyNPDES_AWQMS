@@ -59,6 +59,7 @@ NPDES_AWQMS_Qry<-function
 
 #####create function like AWQMS_Stations but only pulls desired station types 
 #(hoping to cut down on time for Shiny app by cutting out extra stuff)
+#removed 'Canal Irrigation' as monlocType, unlikely to ever be used by NPDES
 
 NPDES_AWQMS_Stations<-function (char = NULL, HUC8 = NULL, HUC8_Name = NULL, 
           org = NULL) 
@@ -67,7 +68,7 @@ NPDES_AWQMS_Stations<-function (char = NULL, HUC8 = NULL, HUC8_Name = NULL,
   query = "SELECT distinct  [MLocID], [StationDes], [MonLocType], [EcoRegion3], [EcoRegion4], [HUC8], [HUC8_Name], [HUC10], [HUC12], [HUC12_Name], [Lat_DD], [Long_DD], [Reachcode], [Measure], [AU_ID]\n  FROM [awqms].[dbo].[VW_AWQMS_Results]"
   
   query<-paste0(query,"\n WHERE MonLocType in ('BEACH Program Site-Ocean','BEACH Program Site-River/Stream',
-               'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
+               'Canal Drainage','Canal Transport','Estuary','Facility Industrial',
                   'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
                   'River/Stream Perennial')")
 
