@@ -88,9 +88,6 @@ HUC8_Names <- c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork',
 # Define UI 
 ui <- fluidPage(
 
-   # Application title
-   titlePanel("ORDEQ AWQMS data retrieval function for NPDES"),
-
    # Sidebar with parameter inputs
    sidebarLayout(
       sidebarPanel(
@@ -144,10 +141,9 @@ ui <- fluidPage(
 
      # Setup main panel
        mainPanel(
-        h1("AWQMS Data Builder"),
-        h5("Select parameters on left to build data retrieval function"),
+        h1("RPA Data Builder"),
+        h5("Select parameters on left to build table and map"),
         #tags$br(),
-        h5("Copy and paste function below into a different R session"),
         h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
         h5("Click 'Download Data' to download results"),
         # Add line
@@ -310,6 +306,9 @@ output$table<-renderDataTable({
 
 #leaflet map
 output$locs<-renderLeaflet({
+  if (input$goButton==0)
+    return()
+  
   leaflet() %>%
     addTiles()%>%
     addMarkers(lng=long(),
