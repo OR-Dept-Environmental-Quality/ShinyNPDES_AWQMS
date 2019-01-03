@@ -15,7 +15,7 @@ NPDES_AWQMS_Qry<-function
     stop("Need to input startdate")
   }
   if (startdate<'2000-01-01'){stop("StartDate prior to 2000")}
-  query <- "SELECT OrganizationID,StationDes, MonLocType,act_id,SampleStartDate,SampleMedia,SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
+  query <- "SELECT OrganizationID,StationDes, MLocID,MonLocType,HUC8_Name,act_id,SampleStartDate,SampleMedia,SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
   Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
   Result_status,Result_Type\n  FROM [awqms].[dbo].[VW_AWQMS_Results]\n  
   WHERE SampleStartDate >= Convert(datetime, {startdate})"

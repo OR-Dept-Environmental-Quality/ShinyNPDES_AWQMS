@@ -31,7 +31,7 @@ chars <- c(".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosu
           "1,2-Dichloropropane ","1,2-Diphenylhydrazine ","1,3-Dichloropropene","2,3,7,8-Tetrachlorodibenzo-p-dioxin ",
           "2,4,5-Trichlorophenol ","2,4,6-Trichlorophenol ","2,4-D ","2,4-Dichlorophenol ","2,4-Dimethylphenol ","2,4-Dinitrophenol ",
           "2,4-Dinitrotoluene ","2,6-Dinitrotoluene ","2-Chloroethyl vinyl ether ","2-Chloronaphthalene ","3,3'-Dichlorobenzidine ",
-          "4,6-Dinitro-o-cresol ","Acenaphthene ","Acenaphthylene ","Acrolein ","Aldrin ","Allyl chloride ","Ammonia and ammonium",
+          "4,6-Dinitro-o-cresol ","Acenaphthene ","Acenaphthylene ","Acrolein ","Aldrin ","Allyl chloride ","Ammonia","Ammonia and ammonium",
           "Ammonia-nitrogen","Anthracene ","Antimony ","Aroclor 1016 ","Aroclor 1221 ","Aroclor 1232 ","Aroclor 1242 ",
           "Aroclor 1248 ","Aroclor 1254 ","Aroclor 1260 ","Arsenic ","Arsenic, Inorganic","Azinphos-methyl ","Azobenzene ",
           "Barium ","Benz[a]anthracene ","Benzene ","Benzene Hexachloride, Beta (BHC)","Benzene Hexachloride, Delta (BHC)",
@@ -132,7 +132,9 @@ ui <- fluidPage(
                      label = "Keep Rejected data",
                      value = FALSE),
        #add action button, idea is to not run query until the button is clicked)
-       actionButton("goButton","Run Query")
+       actionButton("goButton","Run Query"),
+       #add a download button
+       downloadButton('downloadData', 'Download Data')
         ),
 
 
@@ -142,38 +144,20 @@ ui <- fluidPage(
         h5("Select parameters on left to build data retrieval function"),
         #tags$br(),
         h5("Copy and paste function below into a different R session"),
-        h5("addition of output table and download button forthcoming- UNDER CONSTRUCTION"),
+        h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
+        h5("Click 'Download Data' to download results"),
         # Add line
         tags$hr(),
         #Add break
         tags$br(),
         textOutput("selected_chars"),
-        textOutput("sc1"),
-        textOutput("sc2"),
-        textOutput("sc4"),
-        textOutput("sc5"),
-        # Aliana attempting to add table of data
-        tableOutput("table"),
-        #add a download button, see if I can't get it to work
-        downloadButton('downloadData', 'Download data')
+        # Aliana added a data table
+        dataTableOutput("table")
    )
 ))
 
 # Define server logic required to display query
 server <- function(input, output) {
-
-#checks to see what exactly is getting put out  
-output$sc1<- renderText({if(length(input$monlocs) > 0)
-  {toString(sprintf("'%s'", input$monlocs))} else {NULL}})
-  
-output$sc2<- renderText({if(length(input$characteristics) > 0)  
-                  {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
-
-output$sc4<- renderText({if(length(input$huc8_nms) > 0)
-  {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
-
-output$sc5<- renderText({if(length(input$orgs) > 0) 
-  {toString(sprintf("'%s'", input$orgs))} else {NULL}})
 
   
    output$selected_chars <- renderText({
@@ -287,37 +271,30 @@ output$sc5<- renderText({if(length(input$orgs) > 0)
 
 })
    #table of queried data
-   #need to make variables reactive and then have them be input into the query
-   
-
-##make data reactive --definitely runs faster now
+   #have to make dates into strings, otherwise they come out as funny numbers
+   #all other variables are reactive 'as is' except for reject button
+   #isolate data so that you have to click a button so that it runs the query the first time.
+   #However, it just runs after I click it the first time, will need to tinker to get it to run only after clicking button
    isolate({
-   rstats<-reactive({if(length(input$monlocs) > 0) {toString(sprintf("'%s'", input$monlocs))} else {NULL}})
-   rvals<- reactive({if(length(input$characteristics) > 0) {toString(sprintf("'%s'", input$characteristics))} else {NULL}})
-   rhuc8s<-reactive({if(length(input$huc8_nms) > 0) {toString(sprintf("'%s'", input$huc8_nms))} else {NULL}})
-   rorganiz<-reactive({if(length(input$orgs) > 0) {toString(sprintf("'%s'", input$orgs))} else {NULL}})
-   rstdt<-reactive({input$startd})
-   rendd<-reactive({input$endd})
+
+   rstdt<-reactive({toString(sprintf("%s",input$startd))})
+   rendd<-reactive({toString(sprintf("%s",input$endd))})
    rrej<-reactive({if(input$Reject) {TRUE} else {FALSE} })
    
-   #try dat with just start and end date, see if any data is returned
-   #none yet, maybe it needs time? give it a few more minutes
-   #nope, it isn't returning anything.....
-   #we may need to scrap the function and go with a straight ODBC connection and pull from AWQMS....
-   #try using an isolate function first
-   dat<-reactive({NPDES_AWQMS_Qry(startdate=rstdt(),enddate=rendd(),station=c(rstats()),
-                  char=c(rvals()),org=c(rorganiz()),HUC8_Name=c(rhuc8s()),reject=rrej())})
+
+   dat<-reactive({NPDES_AWQMS_Qry(startdate=rstdt(),enddate=rendd(),station=c(input$monlocs),
+                  char=c(input$characteristics),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej())})
    })
-   
-output$table<-renderTable({
+
+      
+output$table<-renderDataTable({
   if (input$goButton==0)
     return()
   
   dat()
   })
 
-#only works in Chrome- and I have verified that it downloads a file with the headers and no data
-#the problem is with the query not pulling anything
+#only works in Chrome
 output$downloadData <- downloadHandler(
   
   filename = function() {paste("dataset-", Sys.Date(), ".csv", sep="")},
