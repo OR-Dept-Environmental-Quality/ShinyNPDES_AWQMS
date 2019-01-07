@@ -201,8 +201,12 @@ server <- function(input, output) {
      wb<-createWorkbook()
      sheet<-createSheet(wb,sheetName="Search Criteria")
      
+<<<<<<< HEAD
      #add title function 
      ##code borrowed from "http://www.sthda.com/english/wiki/r-xlsx-package-a-quick-start-guide-to-manipulate-excel-files-in-r"
+=======
+     #add title function
+>>>>>>> 181b228312e466ce829179740632b47daf3574a5
      #++++++++++++++++++++++++
      # Helper function to add titles
      #++++++++++++++++++++++++
