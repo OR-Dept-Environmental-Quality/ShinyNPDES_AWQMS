@@ -13,6 +13,7 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 library(leaflet)
+library(xlsx)
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -105,7 +106,7 @@ ui <- fluidPage(
 
        #characteristics
          selectizeInput("characteristics",
-                     "Select parameters",
+                     "Select characteristics",
                      choices = chars,
                      multiple = TRUE),
 
@@ -150,7 +151,6 @@ ui <- fluidPage(
         tags$hr(),
         #Add break
         tags$br(),
-        textOutput("selected_chars"),
         
         #create two panels within main panel, one for table and the other for a leaflet map
         splitLayout(
@@ -165,121 +165,11 @@ ui <- fluidPage(
 # Define server logic required to display query
 server <- function(input, output) {
   
-   output$selected_chars <- renderText({
-
-     # Convert all field entries to strings of vectors - This allows their use in the query
-     stats <- toString(sprintf("'%s'", input$monlocs))
-     vals <- toString(sprintf("'%s'", input$characteristics))
-     huc8s <-toString(sprintf("'%s'", input$huc8_nms))
-     organiz <- toString(sprintf("'%s'", input$orgs))
-
-     # Begin the query 
-     qry <- "NPDES_AWQMS_Qry("
-
-  
-  # Add parameters to query - 
-     #General format - If field is not blank, and fields above are not blank add a comma and the paramter
-        # If above fields are all blank, do not add the comma
-        # If field is empty, do nothing
-     
-  #Start date
-      if(length(input$startd) > 0){
-       qry <- paste0(qry, "startdate = '", input$startd,"'" )
-     }
-
-  #enddate
-     if(length(input$endd) > 0){
-
-       if(length(input$startd) > 0){
-         qry <- paste0(qry, ", ")}
-
-       qry <- paste0(qry, "enddate = '", input$endd,"'" )
-     }
-
-  #monlocs
-       if(length(input$monlocs) > 0){
-
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0){
-         qry <- paste0(qry, ", ")
-         }
-
-        qry <- paste0(qry,"station = c(",stats,")"  )
-
-
-       }
-
-  #chars
-     if(length(input$characteristics) > 0){
-
-
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0){
-         qry <- paste0(qry, ", ")
-       }
-
-       qry <- paste0(qry,"char = c(",vals,") "  )
-
-     }
-
- #HUC8s
-     if(length(input$huc8_nms) > 0){
-
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0|
-          length(input$characteristics) > 0|
-          length(input$samp_med) > 0){
-         qry <- paste0(qry, ", ")
-       }
-
-       qry <- paste0(qry,"HUC8_Name = c(",huc8s,") "  )
-
-     }
-     
- #orgs
-     if(length(input$orgs) > 0){
-       
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0|
-          length(input$characteristics) > 0|
-          length(input$samp_med) > 0|
-          length(input$huc8_nms) > 0){
-         qry <- paste0(qry, ", ")
-       }
-       
-       qry <- paste0(qry,"org = c(",organiz,") "  )
-       
-     }
-     
-     #reject filter
-     
-     if(input$Reject) {
-       
-       if(length(input$startd) > 0 |
-          length(input$endd) > 0|
-          length(input$monlocs) > 0|
-          length(input$characteristics) > 0|
-          length(input$huc8_nms) > 0|
-          length(input$orgs) > 0){
-         qry <- paste0(qry, ", ")
-       }
-       
-       qry <- paste0(qry,"reject = TRUE")  
-       
-     }
-     
-     qry <- paste0(qry, ")")
-
-
-})
    
    #have to make dates into strings, otherwise they come out as funny numbers
    #all other variables are reactive 'as is' except for reject button
-   #isolate data so that you have to click a button so that it runs the query the first time.
-   #However, it just runs after I click it the first time, will need to tinker to get it to run only after clicking button
+   #isolate data so that you have to click a button so that it runs the query using eventReactive.
+
    data<-eventReactive(input$goButton,{
 
    rstdt<-toString(sprintf("%s",input$startd))
@@ -295,6 +185,65 @@ server <- function(input, output) {
    #mon<-reactive({dat()$MLocID})
    })
 
+   #create list of the parameters in query, try to get it into a formatted excel to export
+   param<-eventReactive(input$goButton, {
+     
+     #create strings for the input parameters
+     startdt<-paste0("Startdate = ",toString(sprintf("%s",input$startd)))
+     enddt<-paste0("Enddate = ",toString(sprintf("%s",input$endd)))
+     rejected<-paste0("Is rejected data included? ",if(input$Reject) {TRUE} else {FALSE})
+     stations<- paste0("Stations = ",toString(sprintf("'%s'", input$monlocs)))
+     charc<- paste0("Characteristics = ",toString(sprintf("'%s'", input$characteristics)))
+     huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
+     organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
+     
+     #create workbook and sheet
+     wb<-createWorkbook()
+     sheet<-createSheet(wb,sheetName="Search Criteria")
+     
+     #add title function 
+     ##code borrowed from "http://www.sthda.com/english/wiki/r-xlsx-package-a-quick-start-guide-to-manipulate-excel-files-in-r"
+     #++++++++++++++++++++++++
+     # Helper function to add titles
+     #++++++++++++++++++++++++
+     # - sheet : sheet object to contain the title
+     # - rowIndex : numeric value indicating the row to 
+     #contain the title
+     # - title : the text to use as title
+     # - titleStyle : style object to use for title
+     xlsx.addTitle<-function(sheet, rowIndex, title, titleStyle){
+       rows <-createRow(sheet,rowIndex=rowIndex)
+       sheetTitle <-createCell(rows, colIndex=1)
+       setCellValue(sheetTitle[[1,1]], title)
+       setCellStyle(sheetTitle[[1,1]], titleStyle)
+     }
+     TITLE_STYLE <- CellStyle(wb)+ Font(wb,  heightInPoints=16, 
+                                        color="blue", isBold=TRUE, underline=1)
+     SUB_TITLE_STYLE <- CellStyle(wb) + 
+       Font(wb,  heightInPoints=14, 
+            isItalic=TRUE, isBold=FALSE)
+     # Add title
+     xlsx.addTitle(sheet, rowIndex=1, title="RPA Data Search Criteria",
+                   titleStyle = TITLE_STYLE)
+     # Add sub title
+     xlsx.addTitle(sheet, rowIndex=2, 
+                   title="Find way to get Permittee name, Permit #, and date data was pulled here",
+                   titleStyle = SUB_TITLE_STYLE)
+     
+     #Create Cell Block and populate the rows with the parameters
+     cells<-CellBlock(sheet,4,1,7,1)
+     CB.setRowData(cells,startdt,1)
+     CB.setRowData(cells,enddt,2)
+     CB.setRowData(cells,stations,3)
+     CB.setRowData(cells,charc,4)
+     CB.setRowData(cells,huc8s,5)
+     CB.setRowData(cells,organiz,6)
+     CB.setRowData(cells,rejected,7)
+     
+     wb
+     #param<-list(startdt,enddt,stations,charc,huc8s,organiz,rejected)
+   })
+   
 #table of queried data      
 output$table<-renderDataTable({
   
@@ -312,10 +261,17 @@ output$locs<-renderLeaflet({
 })
 
 # Download button- only works in Chrome
+#gives an excel with two sheets, the first is the serach parameters (needs some work), the second is the data
+#set to give NAs as blank cells
 output$downloadData <- downloadHandler(
   
-  filename = function() {paste("dataset-", Sys.Date(), ".csv", sep="")},
-  content = function(file) {write.csv(data(), file,row.names = FALSE)})
+  filename = function() {paste("dataset-", Sys.Date(), ".xlsx", sep="")},
+  content = function(file) {
+    saveWorkbook(param(),file)
+    #write.xlsx(param(),file,sheetName="Search Criteria",col.names=FALSE,row.names=FALSE)
+    write.xlsx(data(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
+    #include another csv file here that will contain the query parameters (need to create reactive function that will contain these)
+    })
 
 }
 # Run the application
