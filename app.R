@@ -90,20 +90,29 @@ HUC8_Names <- c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork',
 ui <- fluidPage(
 
    # Sidebar with parameter inputs
-   sidebarLayout(
+
+  sidebarLayout(
       sidebarPanel(
+        #permittee name
+        textInput("permittee",
+                  label="Permittee Name"),
+        #permit #
+        textInput("permit_num",
+                  label="Permit Number"),
+        # Add line
+        tags$hr(),
+        #Add break
+        tags$br(),
+        
         # Start Date
         dateInput("startd",
                   label = "Select Start Date",
                   min = '1949-09-15',
-                  value = '2000-01-01'
-                  ),
-
+                  value = '2000-01-01'),
         # End date
         dateInput("endd",
                   label = "Select End Date",
                   min = '1900-1-1'),
-
        #characteristics
          selectizeInput("characteristics",
                      "Select characteristics",
@@ -191,7 +200,7 @@ server <- function(input, output) {
      #create strings for the input parameters
      startdt<-paste0("Startdate = ",toString(sprintf("%s",input$startd)))
      enddt<-paste0("Enddate = ",toString(sprintf("%s",input$endd)))
-     rejected<-paste0("Is rejected data included? ",if(input$Reject) {TRUE} else {FALSE})
+     rejected<-paste0("Is rejected data included?  ",if(input$Reject) {TRUE} else {FALSE})
      stations<- paste0("Stations = ",toString(sprintf("'%s'", input$monlocs)))
      charc<- paste0("Characteristics = ",toString(sprintf("'%s'", input$characteristics)))
      huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
@@ -201,12 +210,9 @@ server <- function(input, output) {
      wb<-createWorkbook()
      sheet<-createSheet(wb,sheetName="Search Criteria")
      
-<<<<<<< HEAD
      #add title function 
      ##code borrowed from "http://www.sthda.com/english/wiki/r-xlsx-package-a-quick-start-guide-to-manipulate-excel-files-in-r"
-=======
      #add title function
->>>>>>> 181b228312e466ce829179740632b47daf3574a5
      #++++++++++++++++++++++++
      # Helper function to add titles
      #++++++++++++++++++++++++
@@ -231,11 +237,19 @@ server <- function(input, output) {
                    titleStyle = TITLE_STYLE)
      # Add sub title
      xlsx.addTitle(sheet, rowIndex=2, 
-                   title="Find way to get Permittee name, Permit #, and date data was pulled here",
+                   title=paste0("Permittee = ",input$permittee),
+                   titleStyle = SUB_TITLE_STYLE)
+     # Add sub title
+     xlsx.addTitle(sheet, rowIndex=3, 
+                   title=paste0("Permit # = ",input$permit_num),
+                   titleStyle = SUB_TITLE_STYLE)
+     # Add sub title
+     xlsx.addTitle(sheet, rowIndex=4, 
+                   title=paste0("Date of query = ",Sys.Date()),
                    titleStyle = SUB_TITLE_STYLE)
      
      #Create Cell Block and populate the rows with the parameters
-     cells<-CellBlock(sheet,4,1,7,1)
+     cells<-CellBlock(sheet,6,1,7,1)
      CB.setRowData(cells,startdt,1)
      CB.setRowData(cells,enddt,2)
      CB.setRowData(cells,stations,3)
@@ -269,7 +283,7 @@ output$locs<-renderLeaflet({
 #set to give NAs as blank cells
 output$downloadData <- downloadHandler(
   
-  filename = function() {paste("dataset-", Sys.Date(), ".xlsx", sep="")},
+  filename = function() {paste("AWQMS_Download-", Sys.Date(),"_",input$permit_num,".xlsx", sep="")},
   content = function(file) {
     saveWorkbook(param(),file)
     #write.xlsx(param(),file,sheetName="Search Criteria",col.names=FALSE,row.names=FALSE)
