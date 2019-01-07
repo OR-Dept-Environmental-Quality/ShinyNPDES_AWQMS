@@ -106,7 +106,7 @@ ui <- fluidPage(
 
        #characteristics
          selectizeInput("characteristics",
-                     "Select parameters",
+                     "Select characteristics",
                      choices = chars,
                      multiple = TRUE),
 
@@ -185,18 +185,62 @@ server <- function(input, output) {
    #mon<-reactive({dat()$MLocID})
    })
 
-   #create list of the parameters in query
+   #create list of the parameters in query, try to get it into a formatted excel to export
    param<-eventReactive(input$goButton, {
      
-     startdt<-paste0("Startdate=",toString(sprintf("%s",input$startd)))
-     enddt<-paste0("Enddate=",toString(sprintf("%s",input$endd)))
-     rejected<-paste0("Is rejected data included?",if(input$Reject) {TRUE} else {FALSE})
-     stations<- paste0("Stations=",toString(sprintf("'%s'", input$monlocs)))
-     charc<- paste0("Characteristics=",toString(sprintf("'%s'", input$characteristics)))
-     huc8s<-paste0("HUC8=",toString(sprintf("'%s'", input$huc8_nms)))
-     organiz<- paste0("Organization=",toString(sprintf("'%s'", input$orgs)))
+     #create strings for the input parameters
+     startdt<-paste0("Startdate = ",toString(sprintf("%s",input$startd)))
+     enddt<-paste0("Enddate = ",toString(sprintf("%s",input$endd)))
+     rejected<-paste0("Is rejected data included? ",if(input$Reject) {TRUE} else {FALSE})
+     stations<- paste0("Stations = ",toString(sprintf("'%s'", input$monlocs)))
+     charc<- paste0("Characteristics = ",toString(sprintf("'%s'", input$characteristics)))
+     huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
+     organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
      
-     param<-list(startdt,enddt,stations,charc,huc8s,organiz,rejected)
+     #create workbook and sheet
+     wb<-createWorkbook()
+     sheet<-createSheet(wb,sheetName="Search Criteria")
+     
+     #add title function
+     #++++++++++++++++++++++++
+     # Helper function to add titles
+     #++++++++++++++++++++++++
+     # - sheet : sheet object to contain the title
+     # - rowIndex : numeric value indicating the row to 
+     #contain the title
+     # - title : the text to use as title
+     # - titleStyle : style object to use for title
+     xlsx.addTitle<-function(sheet, rowIndex, title, titleStyle){
+       rows <-createRow(sheet,rowIndex=rowIndex)
+       sheetTitle <-createCell(rows, colIndex=1)
+       setCellValue(sheetTitle[[1,1]], title)
+       setCellStyle(sheetTitle[[1,1]], titleStyle)
+     }
+     TITLE_STYLE <- CellStyle(wb)+ Font(wb,  heightInPoints=16, 
+                                        color="blue", isBold=TRUE, underline=1)
+     SUB_TITLE_STYLE <- CellStyle(wb) + 
+       Font(wb,  heightInPoints=14, 
+            isItalic=TRUE, isBold=FALSE)
+     # Add title
+     xlsx.addTitle(sheet, rowIndex=1, title="RPA Data Search Criteria",
+                   titleStyle = TITLE_STYLE)
+     # Add sub title
+     xlsx.addTitle(sheet, rowIndex=2, 
+                   title="Find way to get Permittee name, Permit #, and date data was pulled here",
+                   titleStyle = SUB_TITLE_STYLE)
+     
+     #Create Cell Block and populate the rows with the parameters
+     cells<-CellBlock(sheet,4,1,7,1)
+     CB.setRowData(cells,startdt,1)
+     CB.setRowData(cells,enddt,2)
+     CB.setRowData(cells,stations,3)
+     CB.setRowData(cells,charc,4)
+     CB.setRowData(cells,huc8s,5)
+     CB.setRowData(cells,organiz,6)
+     CB.setRowData(cells,rejected,7)
+     
+     wb
+     #param<-list(startdt,enddt,stations,charc,huc8s,organiz,rejected)
    })
    
 #table of queried data      
@@ -222,7 +266,8 @@ output$downloadData <- downloadHandler(
   
   filename = function() {paste("dataset-", Sys.Date(), ".xlsx", sep="")},
   content = function(file) {
-    write.xlsx(param(),file,sheetName="Search Criteria",col.names=FALSE,row.names=FALSE)
+    saveWorkbook(param(),file)
+    #write.xlsx(param(),file,sheetName="Search Criteria",col.names=FALSE,row.names=FALSE)
     write.xlsx(data(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
     #include another csv file here that will contain the query parameters (need to create reactive function that will contain these)
     })
