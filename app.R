@@ -155,17 +155,26 @@ ui <- fluidPage(
      # Setup main panel
        mainPanel(
         h1("RPA Data Builder"),
-        h5("Select parameters on left to build table and map"),
-        #tags$br(),
-        h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
-        h5("Click 'Download Data' to download results"),
         # Add line
         tags$hr(),
         #Add break
         tags$br(),
         
-        #two tabs, one for plot and one for map
+        #three tabs: directions,plot and map
         tabsetPanel(
+        #directions tab
+        tabPanel("Directions", 
+                 mainPanel(h5("Select parameters on left to build table and map"),
+                           h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
+                           h5("Peruse the 'Table' and 'Map' tabs to view results and locations"),
+                           h5("Click 'Download Data' to download results"),
+                           tags$br(),
+                           h5("Warning: running query with all characteristics and a large timeframe (1+ year) can overload the server.
+                              If you want to search for all characteristics, it is recommended that you run the query with a short timeframe
+                              first (~6 months), then use the map to locate several stations of interest and refine query accordingly.
+                              Alternatively, you may also refine by HUC8. However, refining search by HUC8 may not include all stations.")
+                           )
+                 ),
         # Aliana added a data table
         tabPanel("Table",dataTableOutput("table")),
         #add leaflet map
