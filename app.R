@@ -187,8 +187,7 @@ server <- function(input, output) {
    rstdt<-toString(sprintf("%s",input$startd))
    rendd<-toString(sprintf("%s",input$endd))
    rrej<-if(input$Reject) {TRUE} else {FALSE} 
-   rchar<-if(length(input$characteristics)==0|
-             input$characteristics=="All RPA Characteristics") {chars} else {input$characteristics}
+   rchar<-if(input$characteristics=="All RPA Characteristics") {chars} else {input$characteristics}
    
 
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),
@@ -207,6 +206,7 @@ server <- function(input, output) {
      charc<- paste0("Characteristics = ",toString(sprintf("'%s'", input$characteristics)))
      huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
      organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
+     allchar<- paste0("List of all potential RPA characteristics: ",toString(chars))
      
      #create workbook and sheet
      wb<-createWorkbook()
@@ -251,7 +251,7 @@ server <- function(input, output) {
                    titleStyle = SUB_TITLE_STYLE)
      
      #Create Cell Block and populate the rows with the parameters
-     cells<-CellBlock(sheet,6,1,7,1)
+     cells<-CellBlock(sheet,6,1,9,1)
      CB.setRowData(cells,startdt,1)
      CB.setRowData(cells,enddt,2)
      CB.setRowData(cells,stations,3)
@@ -259,6 +259,7 @@ server <- function(input, output) {
      CB.setRowData(cells,huc8s,5)
      CB.setRowData(cells,organiz,6)
      CB.setRowData(cells,rejected,7)
+     if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,9)}
      
      wb
      #param<-list(startdt,enddt,stations,charc,huc8s,organiz,rejected)
