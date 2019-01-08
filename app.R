@@ -30,7 +30,7 @@ source("NPDES_AWQMSQuery.R")
 
 ##copper BLM data pull as well? Currently don't have DOC-perhaps talk with Rob Burkhart to see which parameters they're using for that and double check with the model
 
-chars <- c(".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ",
+chars <- c("All RPA Characteristics",".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ",
           ".delta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ","1,1,2-Trichloroethane ",
           "1,1-Dichloroethane ","1,1-Dichloroethylene ","1,2,4,5-Tetrachlorobenzene ","1,2,4-Trichlorobenzene ","1,2-Dichloroethane ",
           "1,2-Dichloropropane ","1,2-Diphenylhydrazine ","1,3-Dichloropropene","2,3,7,8-Tetrachlorodibenzo-p-dioxin ",
@@ -106,11 +106,11 @@ ui <- fluidPage(
         #Add break
         tags$br(),
         
-        # Start Date
+        # Start Date (make start date six months ago)
         dateInput("startd",
                   label = "Select Start Date",
                   min = '1949-09-15',
-                  value = '2000-01-01'),
+                  value = Sys.Date()-182),
         # End date
         dateInput("endd",
                   label = "Select End Date",
@@ -119,7 +119,8 @@ ui <- fluidPage(
          selectizeInput("characteristics",
                      "Select characteristics",
                      choices = chars,
-                     multiple = TRUE),
+                     multiple = TRUE,
+                     selected="All RPA Characteristics"),
 
        # Monitoring locations 
         selectizeInput("monlocs",
@@ -182,18 +183,17 @@ server <- function(input, output) {
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
 
    data<-eventReactive(input$goButton,{
-
+     
    rstdt<-toString(sprintf("%s",input$startd))
    rendd<-toString(sprintf("%s",input$endd))
    rrej<-if(input$Reject) {TRUE} else {FALSE} 
+   rchar<-if(length(input$characteristics)==0|
+             input$characteristics=="All RPA Characteristics") {chars} else {input$characteristics}
    
 
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),
-                  char=c(input$characteristics),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
+                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
    dat
-   #long<-reactive({dat()$Long_DD})
-   #lat<-reactive({dat()$Lat_D})
-   #mon<-reactive({dat()$MLocID})
    })
 
    #create list of the parameters in query, try to get it into a formatted excel to export
