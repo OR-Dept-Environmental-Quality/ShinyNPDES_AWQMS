@@ -28,6 +28,8 @@ source("NPDES_AWQMSQuery.R")
 #once I get a 'NPDES Parameter group' in AWQMS I should try to figure out if I can have it just query the parameter group
 #either that or I can remove the ability to search by parameter and just have it return all of them
 
+##copper BLM data pull as well? Currently don't have DOC-perhaps talk with Rob Burkhart to see which parameters they're using for that and double check with the model
+
 chars <- c(".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ",
           ".delta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ","1,1,2-Trichloroethane ",
           "1,1-Dichloroethane ","1,1-Dichloroethylene ","1,2,4,5-Tetrachlorobenzene ","1,2,4-Trichlorobenzene ","1,2-Dichloroethane ",
@@ -161,12 +163,12 @@ ui <- fluidPage(
         #Add break
         tags$br(),
         
-        #create two panels within main panel, one for table and the other for a leaflet map
-        splitLayout(
+        #two tabs, one for plot and one for map
+        tabsetPanel(
         # Aliana added a data table
-        dataTableOutput("table"),
+        tabPanel("Table",dataTableOutput("table")),
         #add leaflet map
-        leafletOutput("locs")
+        tabPanel("Map",leafletOutput("locs"))
         )
    )
 ))
@@ -237,15 +239,15 @@ server <- function(input, output) {
                    titleStyle = TITLE_STYLE)
      # Add sub title
      xlsx.addTitle(sheet, rowIndex=2, 
-                   title=paste0("Permittee = ",input$permittee),
+                   title=paste0(input$permittee),
                    titleStyle = SUB_TITLE_STYLE)
      # Add sub title
      xlsx.addTitle(sheet, rowIndex=3, 
-                   title=paste0("Permit # = ",input$permit_num),
+                   title=paste0("Permit # ",input$permit_num),
                    titleStyle = SUB_TITLE_STYLE)
      # Add sub title
      xlsx.addTitle(sheet, rowIndex=4, 
-                   title=paste0("Date of query = ",Sys.Date()),
+                   title=paste0("Date of query, ",Sys.Date()),
                    titleStyle = SUB_TITLE_STYLE)
      
      #Create Cell Block and populate the rows with the parameters
@@ -275,7 +277,8 @@ output$locs<-renderLeaflet({
     addTiles()%>%
     addMarkers(lng=~Long_DD,
                lat=~Lat_DD,
-               popup=~MLocID)
+               popup=paste("Station ID: ",data()$MLocID,"<br>",
+                           "Description: ",data()$StationDes,"<br>"))
 })
 
 # Download button- only works in Chrome
