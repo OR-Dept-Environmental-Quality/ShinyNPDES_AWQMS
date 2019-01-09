@@ -1,12 +1,8 @@
 #
 # This is a Shiny web application. You can run the application by clicking
 # the 'Run App' button above.
-######This is Aliana's attempt at using the Shiny App built by Travis Pritchard 
-######to create a specific downloadable query from AWQMS designed for use by the NPDES Permit Writers
-######ideally the data would be able to go straight into the RPA analysis
-
-
-##Note- removed ability to show QC data- will not be needed for RPA analysis
+######This app, based on a modified verison of the AWQMSdata_ShinyHelp app built by Travis Pritchard, 
+######is designed to pull out RPA related data from AWQMS and put it into a table for use in RPA analysis
 
 print("Initial data queries may take a few minutes.")
 
@@ -14,6 +10,7 @@ library(shiny)
 library(AWQMSdata)
 library(leaflet)
 library(xlsx)
+library(dplyr)
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -201,7 +198,38 @@ server <- function(input, output) {
 
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),
                   char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
-   dat
+   
+   #want to add list of characteristics for each monitoring location to the popup, I think to do that we're going to have to pull 
+   #in data() and add a column that has all characteristic names for each monitoring location....
+   #if I just add data$char_Names I only get the first char (usually temperature, water)
+   #able to do this by grouping via MLocID, then getting the unique chars via summarize
+   #then merge the two dataframes together using MLocID, creates column called "type" that has chars
+   grp<-dat %>% group_by(MLocID) %>% 
+     summarize(type = paste(sort(unique(Char_Name)),collapse=", "))
+   
+   #merge 
+   
+   mer<-merge(dat,grp, by="MLocID")
+   
+   mer
+   })
+   
+   #table of queried data      
+   output$table<-renderDataTable({
+     
+     data()
+   })
+   
+   #leaflet map
+   output$locs<-renderLeaflet({
+     
+     leaflet(data()) %>%
+       addTiles()%>%
+       addMarkers(lng=~Long_DD,
+                  lat=~Lat_DD,
+                  popup=paste("Station ID: ",data()$MLocID,"<br>",
+                              "Description: ",data()$StationDes,"<br>",
+                              "Characteristics: ",data()$type,"<br>"))
    })
 
    #create list of the parameters in query, try to get it into a formatted excel to export
@@ -270,26 +298,25 @@ server <- function(input, output) {
      CB.setRowData(cells,rejected,7)
      if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,9)}
      
+     #find a way to add the leaflet map in here as well
+     
+     #png("map.png")
+     #leaflet(data()) %>%
+     #               addTiles()%>%
+     #               addMarkers(lng=~Long_DD,
+     #                          lat=~Lat_DD,
+     #                          label=paste("Station ID: ",data()$MLocID,"<br>",
+     #                                      "Description: ",data()$StationDes,"<br>",
+     #                                      "Characteristics: ",data()$type,"<br>"))
+     #dev.off()
+     
+     #sheet2<-createSheet(wb,sheetName = "Map")
+     #addPicture("map.png",sheet2)
+       
      wb
-     #param<-list(startdt,enddt,stations,charc,huc8s,organiz,rejected)
    })
    
-#table of queried data      
-output$table<-renderDataTable({
-  
-  data()
-  })
-
-#leaflet map
-output$locs<-renderLeaflet({
-  
-  leaflet(data()) %>%
-    addTiles()%>%
-    addMarkers(lng=~Long_DD,
-               lat=~Lat_DD,
-               popup=paste("Station ID: ",data()$MLocID,"<br>",
-                           "Description: ",data()$StationDes,"<br>"))
-})
+   
 
 # Download button- only works in Chrome
 #gives an excel with two sheets, the first is the serach parameters (needs some work), the second is the data
@@ -298,10 +325,10 @@ output$downloadData <- downloadHandler(
   
   filename = function() {paste("AWQMS_Download-", Sys.Date(),"_",input$permit_num,".xlsx", sep="")},
   content = function(file) {
+    #sheet with query parameters
     saveWorkbook(param(),file)
-    #write.xlsx(param(),file,sheetName="Search Criteria",col.names=FALSE,row.names=FALSE)
+    #sheet with data
     write.xlsx(data(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
-    #include another csv file here that will contain the query parameters (need to create reactive function that will contain these)
     })
 
 }
