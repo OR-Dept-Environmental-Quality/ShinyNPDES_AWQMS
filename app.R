@@ -11,6 +11,7 @@ library(AWQMSdata)
 library(leaflet)
 library(xlsx)
 library(dplyr)
+library(xlsxjars)
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -214,10 +215,18 @@ server <- function(input, output) {
    mer
    })
    
+   sub<-eventReactive(input$goButton,{
+     sub<-select(data(),OrganizationID,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
+               SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
+               Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
+               Result_status,Result_Type)
+   sub
+   })
+   
    #table of queried data      
    output$table<-renderDataTable({
      
-     data()
+    sub()
    })
    
    #leaflet map
@@ -328,7 +337,7 @@ output$downloadData <- downloadHandler(
     #sheet with query parameters
     saveWorkbook(param(),file)
     #sheet with data
-    write.xlsx(data(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
+    write.xlsx(sub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
     })
 
 }
