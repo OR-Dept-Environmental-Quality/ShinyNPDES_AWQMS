@@ -60,6 +60,7 @@ chars <- c("All RPA Characteristics",".alpha.-Endosulfan ",".alpha.-Hexachlorocy
           "trans-1,2-Dichloroethylene ","Tribromomethane ","Tributlytin ","Tributyltin ","Trichloroethene (TCE) ",
           "Turbidity","Turbidity Field","Vinyl chloride ","Zinc ")
 
+#NPDES_AWQMS_Stations functions only pulls stations 
 station <- NPDES_AWQMS_Stations()
 station <- station$MLocID
 station <- sort(station)
@@ -238,7 +239,8 @@ server <- function(input, output) {
                   lat=~Lat_DD,
                   popup=paste("Station ID: ",data()$MLocID,"<br>",
                               "Description: ",data()$StationDes,"<br>",
-                              "Characteristics: ",data()$type,"<br>"))
+                              "Characteristics: ",data()$type,"<br>"),
+                  popupOptions= popupOptions(maxHeight = 75))
    })
 
    #create list of the parameters in query, try to get it into a formatted excel to export
@@ -314,9 +316,9 @@ server <- function(input, output) {
      #               addTiles()%>%
      #               addMarkers(lng=~Long_DD,
      #                          lat=~Lat_DD,
-     #                          label=paste("Station ID: ",data()$MLocID,"<br>",
+     ##                          label=paste("Station ID: ",data()$MLocID,"<br>",
      #                                      "Description: ",data()$StationDes,"<br>",
-     #                                      "Characteristics: ",data()$type,"<br>"))
+     #                                     "Characteristics: ",data()$type,"<br>"))
      #dev.off()
      
      #sheet2<-createSheet(wb,sheetName = "Map")
