@@ -12,6 +12,8 @@ library(leaflet)
 library(xlsx)
 library(dplyr)
 library(xlsxjars)
+library(mapview)
+
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -311,18 +313,18 @@ server <- function(input, output) {
      
      #find a way to add the leaflet map in here as well
      
-     #png("map.png")
-     #leaflet(data()) %>%
-     #               addTiles()%>%
-     #               addMarkers(lng=~Long_DD,
-     #                          lat=~Lat_DD,
-     ##                          label=paste("Station ID: ",data()$MLocID,"<br>",
-     #                                      "Description: ",data()$StationDes,"<br>",
-     #                                     "Characteristics: ",data()$type,"<br>"))
-     #dev.off()
      
-     #sheet2<-createSheet(wb,sheetName = "Map")
-     #addPicture("map.png",sheet2)
+     map<-leaflet(data()) %>%
+                    addTiles()%>%
+                    addMarkers(lng=~Long_DD,
+                              lat=~Lat_DD,
+                               label=paste("Station ID: ",data()$MLocID,"<br>",
+                                           "Description: ",data()$StationDes,"<br>",
+                                          "Characteristics: ",data()$type,"<br>"))
+     mapshot(map,file="map.png")
+     
+     sheet2<-createSheet(wb,sheetName = "Map")
+     addPicture("map.png",sheet2)
        
      wb
    })
