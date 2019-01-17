@@ -315,12 +315,12 @@ server <- function(input, output) {
      
      
      map<-leaflet(data()) %>%
-                    addTiles()%>%
-                    addMarkers(lng=~Long_DD,
-                              lat=~Lat_DD,
-                               label=paste("Station ID: ",data()$MLocID,"<br>",
-                                           "Description: ",data()$StationDes,"<br>",
-                                          "Characteristics: ",data()$type,"<br>"))
+                  addTiles()%>%
+                  addMarkers(lng=~Long_DD,
+                             lat=~Lat_DD,
+                             label=~MLocID,
+                             labelOptions=labelOptions(noHide=T))
+     
      mapshot(map,file="map.png")
      
      sheet2<-createSheet(wb,sheetName = "Map")
