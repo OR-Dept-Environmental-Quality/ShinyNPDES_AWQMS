@@ -218,8 +218,9 @@ server <- function(input, output) {
    mer
    })
    
+   #take data, make a subtable so that we only show the desired columns from the AWQMS data pull and in the desired order
    sub<-eventReactive(input$goButton,{
-     sub<-select(data(),OrganizationID,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
+     sub<-select(data(),OrganizationID,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
                SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
                Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
                Result_status,Result_Type)
