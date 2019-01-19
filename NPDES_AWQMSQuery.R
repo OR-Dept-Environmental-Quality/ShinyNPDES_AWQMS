@@ -14,6 +14,7 @@ NPDES_AWQMS_Qry<-function
   if (missing(startdate)) {
     stop("Need to input startdate")
   }
+  
   query <- "SELECT OrganizationID,Project1,StationDes, MLocID,Lat_DD,Long_DD,MonLocType,HUC8_Name,act_id,SampleStartDate,SampleMedia,
   SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
   Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
