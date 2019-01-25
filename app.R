@@ -62,6 +62,14 @@ chars <- c("All RPA Characteristics",".alpha.-Endosulfan ",".alpha.-Hexachlorocy
           "trans-1,2-Dichloroethylene ","Tribromomethane ","Tributlytin ","Tributyltin ","Trichloroethene (TCE) ",
           "Turbidity","Turbidity Field","Vinyl chloride ","Zinc ")
 
+# Check to see if saved cache of data exists. If it does not, or is greater than
+# 7 days old, query out stations and organizations and save the cache
+# 
+
+if(!file.exists("query_cache.RData") | 
+   difftime(Sys.Date() ,file.mtime("query_cache.RData") , units = c("days")) > 7){
+  
+
 #NPDES_AWQMS_Stations functions only pulls stations 
 station <- NPDES_AWQMS_Stations()
 station <- station$MLocID
@@ -70,6 +78,12 @@ station <- sort(station)
 organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- sort(organization)
+
+save(station, organization, file = 'query_cache.RData')
+} else {
+  load("query_cache.RData")
+}
+
 
 HUC8_Names <- c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork',
                 'Brownlee Reservoir', 'Bully', 'Burnt', 'Chetco', 'Chief Joseph',
