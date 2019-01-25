@@ -64,6 +64,7 @@ chars <- c("All RPA Characteristics",".alpha.-Endosulfan ",".alpha.-Hexachlorocy
 
 #NPDES_AWQMS_Stations functions only pulls stations 
 station <- NPDES_AWQMS_Stations()
+Mtype<-station$MonLocType
 station <- station$MLocID
 station <- sort(station)
 
@@ -128,6 +129,13 @@ ui <- fluidPage(
                         "Select Monitoring Locations",
                         choices = station,
                         multiple = TRUE),
+       
+       # Monitoring location types--this won't work unless I add monitoring type to NPDES query
+        selectizeInput("montype",
+                       "Select Monitoring Location Types",
+                       choices=Mtype,
+                       multiple=TRUE),
+       
        #add warning
        tags$em("Warning: HUC8 may not include all stations"),
        
@@ -200,7 +208,7 @@ server <- function(input, output) {
    rchar<-if(input$characteristics=="All RPA Characteristics") {chars} else {input$characteristics}
    
 
-   dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),
+   dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
                   char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
    
    #want to add list of characteristics for each monitoring location to the popup, I think to do that we're going to have to pull 
@@ -254,6 +262,7 @@ server <- function(input, output) {
      enddt<-paste0("Enddate = ",toString(sprintf("%s",input$endd)))
      rejected<-paste0("Is rejected data included?  ",if(input$Reject) {TRUE} else {FALSE})
      stations<- paste0("Stations = ",toString(sprintf("'%s'", input$monlocs)))
+     monty<- paste0("Monitoring Location Types = ",toString(sprintf("'%s'", input$montype)))
      charc<- paste0("Characteristics = ",toString(sprintf("'%s'", input$characteristics)))
      huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
      organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
@@ -302,15 +311,16 @@ server <- function(input, output) {
                    titleStyle = SUB_TITLE_STYLE)
      
      #Create Cell Block and populate the rows with the parameters
-     cells<-CellBlock(sheet,6,1,9,1)
+     cells<-CellBlock(sheet,6,1,10,1)
      CB.setRowData(cells,startdt,1)
      CB.setRowData(cells,enddt,2)
      CB.setRowData(cells,stations,3)
-     CB.setRowData(cells,charc,4)
-     CB.setRowData(cells,huc8s,5)
-     CB.setRowData(cells,organiz,6)
-     CB.setRowData(cells,rejected,7)
-     if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,9)}
+     CB.setRowData(cells,monty,4)
+     CB.setRowData(cells,charc,5)
+     CB.setRowData(cells,huc8s,6)
+     CB.setRowData(cells,organiz,7)
+     CB.setRowData(cells,rejected,8)
+     if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,10)}
      
      #find a way to add the leaflet map in here as well
      

@@ -8,7 +8,7 @@
 # in additon, the query is set up so that when Reject=False (default), no rejected data will be returned
 
 NPDES_AWQMS_Qry<-function 
-(startdate = "2000-01-01", enddate = NULL, station = NULL, char = NULL, org = NULL, 
+(startdate = "2000-01-01", enddate = NULL, station = NULL, montype = NULL, char = NULL, org = NULL, 
  HUC8 = NULL, HUC8_Name = NULL,reject=FALSE) 
 {
   if (missing(startdate)) {
@@ -40,10 +40,15 @@ NPDES_AWQMS_Qry<-function
   }
   if (reject==FALSE) {query=paste0(query,"\n AND Result_status NOT LIKE 'Rejected'")}
   query=paste0(query,"\n AND SampleMedia in ('Water')")
-  query=paste0(query,"\n AND MonLocType in ('BEACH Program Site-Ocean','BEACH Program Site-River/Stream',
+  if (length(montype)>0){
+    query=paste0(query,"\n AND MonLocType in ({montype*})")
+  } 
+  else {
+    query=paste0(query,"\n AND MonLocType in ('BEACH Program Site-Ocean','BEACH Program Site-River/Stream',
                'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
                'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
                'River/Stream Perennial')")
+    }
   query=paste0(query,"\n AND MLocID <> '10000-ORDEQ'\n                   \n AND activity_type NOT LIKE 'Quality Control%'")
   
   con <- DBI::dbConnect(odbc::odbc(), "AWQMS")
