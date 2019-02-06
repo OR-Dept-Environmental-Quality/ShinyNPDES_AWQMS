@@ -80,7 +80,7 @@ organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- sort(organization)
 
-save(station, organization, file = 'query_cache.RData')
+save(station, Mtype, organization, file = 'query_cache.RData')
 } else {
   load("query_cache.RData")
 }
