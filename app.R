@@ -350,7 +350,7 @@ server <- function(input, output) {
      CB.setRowData(cells,huc8s,6)
      CB.setRowData(cells,organiz,7)
      CB.setRowData(cells,rejected,8)
-     if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,10)}
+     if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))}
      
      #find a way to add the leaflet map in here as well
      
