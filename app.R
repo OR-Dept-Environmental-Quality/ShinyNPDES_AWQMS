@@ -235,6 +235,11 @@ server <- function(input, output) {
    sub
    })
    
+   #take data, make subtable just for RPA data
+  # rpa<-eventReactive(input$goButton,{
+   #  rpa<-select(data(),)
+  # })
+   
    #table of queried data      
    output$table<-renderDataTable({
      
@@ -353,6 +358,8 @@ output$downloadData <- downloadHandler(
     saveWorkbook(param(),file)
     #sheet with data
     write.xlsx(sub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
+    #sheet with just RPA format
+    write.xlsx(rpa(),file,sheetName="RPA_Data",row.names=FALSE,showNA=FALSE,append=TRUE)
     })
 
 }
