@@ -351,10 +351,9 @@ server <- function(input, output) {
      CB.setRowData(cells,organiz,7)
      CB.setRowData(cells,rejected,8)
      if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))}
+     setColumnWidth(sheet,1,120)
      
-     #find a way to add the leaflet map in here as well
-     
-     
+     #add the leaflet map as a sheet in the download excel
      map<-leaflet(data()) %>%
                   addTiles()%>%
                   addMarkers(lng=~Long_DD,
