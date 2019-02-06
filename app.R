@@ -240,13 +240,24 @@ server <- function(input, output) {
    mer
    })
    
-   #take data, make a subtable so that we only show the desired columns from the AWQMS data pull and in the desired order
-   sub<-eventReactive(input$goButton,{
-     sub<-select(data(),OrganizationID,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
+   #take data, make a subtable for VIEWING so that we only show the desired columns from the AWQMS data pull and in the desired order
+   tsub<-eventReactive(input$goButton,{
+     tsub<-select(data(),Org_Name,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
                SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
-               Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
-               Result_status,Result_Type)
-   sub
+               Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,
+               MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
+               Activity_Comment,Result_Comment,Result_status,Result_Type)
+   tsub
+   })
+   
+   #take data, make a subtable for DOWNLOAD so that we only show the desired columns from the AWQMS data pull and in the desired order
+   dsub<-eventReactive(input$goButton,{
+     dsub<-select(data(),OrganizationID,Org_Name,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
+                 SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
+                 Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
+                 MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
+                 Activity_Comment,Result_Comment,Result_status,Result_Type)
+     dsub
    })
    
    #take data, make subtable just for RPA data
@@ -257,7 +268,7 @@ server <- function(input, output) {
    #table of queried data      
    output$table<-renderDataTable({
      
-    sub()
+    tsub()
    })
    
    #leaflet map
@@ -371,9 +382,9 @@ output$downloadData <- downloadHandler(
     #sheet with query parameters
     saveWorkbook(param(),file)
     #sheet with data
-    write.xlsx(sub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
+    write.xlsx(dsub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
     #sheet with just RPA format
-    write.xlsx(rpa(),file,sheetName="RPA_Data",row.names=FALSE,showNA=FALSE,append=TRUE)
+    #write.xlsx(rpa(),file,sheetName="RPA_Data",row.names=FALSE,showNA=FALSE,append=TRUE)
     })
 
 }
