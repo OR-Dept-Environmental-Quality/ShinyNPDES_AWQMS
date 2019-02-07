@@ -21,6 +21,8 @@ library(mapview)
 
 #right now this is sourced, but will likely change it so that it is part of it's own library that gets pulled in at the beginning
 source("NPDES_AWQMSQuery.R")
+#funciton not ready yet, but sourcing it for when it is
+source("CopperBLM_Functon.R")
 
 # Query out the valid values ---------------------------------------------
 
@@ -243,16 +245,15 @@ server <- function(input, output) {
    #take data, make a subtable for VIEWING so that we only show the desired columns from the AWQMS data pull and in the desired order
    tsub<-eventReactive(input$goButton,{
      tsub<-select(data(),Org_Name,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
-               SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
+               SampleSubmedia,Activity_Type,Statistical_Base,Char_Name,Char_Speciation,
                Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,
-               MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
                Activity_Comment,Result_Comment,Result_status,Result_Type)
    tsub
    })
    
    #take data, make a subtable for DOWNLOAD so that we only show the desired columns from the AWQMS data pull and in the desired order
    dsub<-eventReactive(input$goButton,{
-     dsub<-select(data(),OrganizationID,Org_Name,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
+     dsub<-select(data(),OrganizationID,Org_Name,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleStartTime,SampleMedia,
                  SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
                  Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
                  MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
@@ -350,7 +351,9 @@ server <- function(input, output) {
      CB.setRowData(cells,huc8s,6)
      CB.setRowData(cells,organiz,7)
      CB.setRowData(cells,rejected,8)
-     if(input$characteristics=="All RPA Characteristics") {CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))}
+     if(input$characteristics=="All RPA Characteristics") {
+       CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
+       }
      setColumnWidth(sheet,1,120)
      
      #add the leaflet map as a sheet in the download excel
