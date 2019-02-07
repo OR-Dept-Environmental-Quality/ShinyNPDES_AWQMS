@@ -22,47 +22,42 @@ library(mapview)
 #right now this is sourced, but will likely change it so that it is part of it's own library that gets pulled in at the beginning
 source("NPDES_AWQMSQuery.R")
 #funciton not ready yet, but sourcing it for when it is
-source("CopperBLM_Functon.R")
+#source("CopperBLM_Function.R")
 
 # Query out the valid values ---------------------------------------------
 
 #NPDES only needs a limited # of Chars, this should help speed up the program
-#once I get a 'NPDES Parameter group' in AWQMS I should try to figure out if I can have it just query the parameter group
-#either that or I can remove the ability to search by parameter and just have it return all of them
 
-##copper BLM data pull as well? Currently don't have DOC-perhaps talk with Rob Burkhart to see which parameters they're using for that and double check with the model
+chars <- c("All RPA Characteristics","Copper BLM Characteristics",".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",
+           ".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ",
+           "1,1,2-Trichloroethane ","1,1-Dichloroethane ","1,1-Dichloroethylene ","1,2,3,4,5,6-Hexachlorocyclohexane",
+           "1,2,4,5-Tetrachlorobenzene ","1,2,4-Trichlorobenzene ","1,2-Dichloroethane ","1,2-Dichloropropane ","1,2-Diphenylhydrazine ",
+           "1,3-Dichloropropene","2,4,5-Trichlorophenol ","2,4,6-Trichlorophenol ","2,4-Dichlorophenol ","2,4-Dimethylphenol ",
+           "2,4-Dinitrophenol ","2,4-Dinitrotoluene ","2,6-Dinitrotoluene ","2-Chloroethyl vinyl ether ","2-Chloronaphthalene ",
+           "3,3'-Dichlorobenzidine ","4,6-Dinitro-o-cresol ","Acenaphthene ","Acenaphthylene ","Acrolein ","Aldrin ",
+           "Alkalinity, total","Allyl chloride ","Aluminum ","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen","Anthracene ",
+           "Antimony ","Aroclor 1016 ","Aroclor 1221 ","Aroclor 1232 ","Aroclor 1242 ","Aroclor 1248 ","Aroclor 1254 ","Aroclor 1260 ",
+           "Arsenic","Arsenic ion (3+) ","Arsenic, Inorganic","Azinphos-methyl ","Benz[a]anthracene ","Benzene ",
+           "Benzene Hexachloride, Beta (BHC)","Benzidine ","Benzo(b)fluoranthene ","Benzo[a]pyrene ","Benzo[ghi]perylene ",
+           "Benzo[k]fluoranthene ","Beryllium ","Biochemical oxygen demand, non-standard conditions",
+           "Biochemical oxygen demand, standard conditions","Bis(2-chloro-1-methylethyl) ether ","Bis(2-chloroethoxy)methane ",
+           "Bis(2-chloroethyl) ether ","Butyl benzyl phthalate ","Cadmium ","Calcium","Carbon tetrachloride ","Chlordane ","Chloride",
+           "Chlorobenzene ","Chlorodibromomethane ","Chloroethane ","Chloroform ","Chloromethane","Chlorpyrifos ","Chromium ",
+           "Chromium(III)","Chromium(VI) ","Chrysene ","Conductivity","Copper","Copper ","Cyanide ","Demeton ",
+           "Di(2-ethylhexyl) phthalate ","Dibenz[a,h]anthracene ","Dibutyl phthalate ","Dichlorobromomethane ","Dieldrin ",
+           "Diethyl phthalate ","Dimethyl phthalate ","Di-n-octyl phthalate ","Dissolved oxygen (DO)","Dissolved oxygen saturation",
+           "Endosulfan sulfate ","Endrin ","Endrin aldehyde ","Ethylbenzene ","Fluoranthene ","Fluorene ","Hardness, Ca, Mg",
+           "Hardness, carbonate","Hardness, non-carbonate","Heptachlor ","Heptachlor epoxide ","Hexachlorobenzene ","Hexachlorobutadiene ",
+           "Hexachlorocyclopentadiene ","Hexachloroethane ","Indeno[1,2,3-cd]pyrene ","Inorganic nitrogen (nitrate and nitrite)","Iron ",
+           "Isophorone ","Kjeldahl nitrogen","Lead ","Lindane ","Magnesium","Malathion ","m-Dichlorobenzene ","Mercury ","Methoxychlor ",
+           "Methyl bromide ","Methylene chloride ","Mirex ","Naphthalene ","Nickel ","Nitrate ","Nitrate + Nitrite","Nitrobenzene ",
+           "N-Nitrosodimethylamine ","N-Nitrosodi-n-propylamine ","N-Nitrosodiphenylamine ","o-Chlorophenol ","o-Dichlorobenzene ",
+           "o-Nitrophenol ","Organic carbon","p,p'-DDD ","p,p'-DDE ","p,p'-DDT ","Parathion ","p-Bromophenyl phenyl ether ",
+           "p-Chloro-m-cresol ","p-Chlorophenyl phenyl ether ","p-Dichlorobenzene ","Pentachlorobenzene ","Pentachlorophenol ","pH",
+           "Phenanthrene ","Phenol ","p-Nitrophenol ","Potassium","Pyrene ","Salinity","Selenium ","Silver ","Sodium","Sulfate","Sulfide",
+           "Temperature, water","Tetrachloroethene ","Tetrachloroethylene ","Thallium ","Toluene ","Total hardness","Total Kjeldahl nitrogen",
+           "Total Sulfate","Toxaphene ","trans-1,2-Dichloroethylene ","Tribromomethane ","Trichloroethene (TCE) ","Vinyl chloride ","Zinc ")
 
-chars <- c("All RPA Characteristics",".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ",
-          ".delta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ","1,1,2-Trichloroethane ",
-          "1,1-Dichloroethane ","1,1-Dichloroethylene ","1,2,4,5-Tetrachlorobenzene ","1,2,4-Trichlorobenzene ","1,2-Dichloroethane ",
-          "1,2-Dichloropropane ","1,2-Diphenylhydrazine ","1,3-Dichloropropene","2,3,7,8-Tetrachlorodibenzo-p-dioxin ",
-          "2,4,5-Trichlorophenol ","2,4,6-Trichlorophenol ","2,4-D ","2,4-Dichlorophenol ","2,4-Dimethylphenol ","2,4-Dinitrophenol ",
-          "2,4-Dinitrotoluene ","2,6-Dinitrotoluene ","2-Chloroethyl vinyl ether ","2-Chloronaphthalene ","3,3'-Dichlorobenzidine ",
-          "4,6-Dinitro-o-cresol ","Acenaphthene ","Acenaphthylene ","Acrolein ","Aldrin ","Allyl chloride ","Ammonia","Ammonia and ammonium",
-          "Ammonia-nitrogen","Anthracene ","Antimony ","Aroclor 1016 ","Aroclor 1221 ","Aroclor 1232 ","Aroclor 1242 ",
-          "Aroclor 1248 ","Aroclor 1254 ","Aroclor 1260 ","Arsenic ","Arsenic, Inorganic","Azinphos-methyl ","Azobenzene ",
-          "Barium ","Benz[a]anthracene ","Benzene ","Benzene Hexachloride, Beta (BHC)","Benzene Hexachloride, Delta (BHC)",
-          "Benzidine ","Benzo(b)fluoranthene ","Benzo[a]pyrene ","Benzo[ghi]perylene ","Benzo[k]fluoranthene ","Beryllium ",
-          "Bis(2-chloro-1-methylethyl) ether ","Bis(2-chloroethoxy)methane ","Bis(2-chloroethyl) ether ","Bis(chloromethyl) ether",
-          "Butyl benzyl phthalate ","Cadmium ","Carbon tetrachloride ","Chlordane ","Chlordane, technical, and/or chlordane metabolites",
-          "Chlorobenzene ","Chlorodibromomethane ","Chloroethane ","Chloroform ","Chloromethane","Chlorpyrifos ","Chromium ",
-          "Chromium(III)","Chromium(VI) ","Chrysene ","Copper ","Cyanide ","Demeton ","Di(2-ethylhexyl) phthalate ",
-          "Dibenz[a,h]anthracene ","Dibutyl phthalate ","Dichlorobromomethane ","Dieldrin ","Diethyl phthalate ","Dimethyl phthalate ",
-          "Di-n-octyl phthalate ","Dioxins and furans as 2,3,7,8-TCDD TEQs","Endosulfan ","Endosulfan sulfate ","Endrin ",
-          "Endrin aldehyde ","Ethylbenzene ","Fluoranthene ","Fluorene ","Hardness, Ca, Mg","Hardness, carbonate",
-          "Hardness, non-carbonate","Heptachlor ","Heptachlor epoxide ","Hexachlorobenzene ","Hexachlorobutadiene ",
-          "Hexachlorocyclopentadiene ","Hexachloroethane ","Hydrogen sulfide","Indeno[1,2,3-cd]pyrene ",
-          "Inorganic nitrogen (nitrate and nitrite)","Inorganic phosphorus","Iron ","Isophorone ","Lead ","Lindane ","Malathion ",
-          "Manganese ","m-Dichlorobenzene ","Mercury ","Methoxychlor ","Methyl bromide ","Methylene chloride ","Methylmercury(1+) ",
-          "Mirex ","Naphthalene ","Nickel ","Nitrate ","Nitrate + Nitrite","Nitrobenzene ","Nitrosamine","N-Nitrosodiethylamine",
-          "N-Nitrosodiethylamine ","N-Nitrosodimethylamine ","N-Nitrosodi-n-butylamine ","N-Nitrosodi-n-propylamine ",
-          "N-Nitrosodiphenylamine ","N-Nitrosopyrrolidine ","o-Chlorophenol ","o-Dichlorobenzene ","o-Nitrophenol ","p,p'-DDD ",
-          "p,p'-DDE ","p,p'-DDT ","Parathion ","p-Bromophenyl phenyl ether ","p-Chloro-m-cresol ","p-Chlorophenyl phenyl ether ",
-          "p-Dichlorobenzene ","Pentachlorobenzene ","Pentachlorophenol ","pH","Phenanthrene ","Phenol ","Phenols","Phosphorus ",
-          "p-Nitrophenol ","Polychlorinated biphenyls ","Pyrene ","Selenium ","Silver ","Silvex ","Temperature, water",
-          "Tetrachloroethene ","Tetrachloroethylene ","Thallium ","Toluene ","Total hardness","Total PCBs","Toxaphene ",
-          "trans-1,2-Dichloroethylene ","Tribromomethane ","Tributlytin ","Tributyltin ","Trichloroethene (TCE) ",
-          "Turbidity","Turbidity Field","Vinyl chloride ","Zinc ")
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -222,6 +217,9 @@ server <- function(input, output) {
    rendd<-toString(sprintf("%s",input$endd))
    rrej<-if(input$Reject) {TRUE} else {FALSE} 
    rchar<-if(input$characteristics=="All RPA Characteristics") {chars} else {input$characteristics}
+   rchar<-if(input$characteristics=="Copper BLM Characteristics") 
+     {c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
+     "Temperature, water","Total Sulfate","Sulfide")} else {input$characteristics}
    
 
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
