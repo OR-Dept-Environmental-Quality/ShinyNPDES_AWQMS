@@ -5,11 +5,11 @@
 
 #test dataset
 
-testdata<-data.frame("Char_Name"= c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
-                 "Temperature, water","Total Sulfate","Sulfide","Toluene"))
-testdata$Result<-c(1,1,1,1,1,1,1,1,1,1,1,1,1,1)
-testdata$Result_Unit<-c("mg/l","ug/l","ug/l","mg/l","ug/l","None","ug/l","ug/l","ug/l","ug/l","deg F","ug/l","ug/l","ng/l")
-testdata$Statistical_Base<-c(NA,NA,NA,1,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA)
+#testdata<-data.frame("Char_Name"= c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
+ #                "Temperature, water","Total Sulfate","Sulfide","Toluene"))
+#testdata$Result<-c(1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+#testdata$Result_Unit<-c("mg/l","ug/l","ug/l","mg/l","ug/l","None","ug/l","ug/l","ug/l","ug/l","deg F","ug/l","ug/l","ng/l")
+#testdata$Statistical_Base<-c(NA,NA,NA,1,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA)
 
 #need a unit conversaion function, it works, but must have units in same format AWQMS does (ie don't capitalize L)
 BLMunit_conv<-function(x,char,unit,conv){
@@ -75,10 +75,10 @@ CuBLM<-function(x) {
 }
 
 
-source("NPDES_AWQMSQuery.R")
-data<-NPDES_AWQMS_Qry(startdate='2000-01-01',enddate='2018-12-27',org="PDX_BES(NOSTORETID)",montype="Facility Municipal Sewage (POTW)")
+#source("NPDES_AWQMSQuery.R")
+#data<-NPDES_AWQMS_Qry(startdate='2000-01-01',enddate='2018-12-27',org="PDX_BES(NOSTORETID)",montype="Facility Municipal Sewage (POTW)")
 
-trans<-CuBLM(data)
+#trans<-CuBLM(data)
 
 
 

@@ -17,12 +17,10 @@ library(mapview)
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
-#the function NPDES_AWQMS_Qry will only pull water data since the year 2000 from a select set of monloc types
-
-#right now this is sourced, but will likely change it so that it is part of it's own library that gets pulled in at the beginning
+#the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types
 source("NPDES_AWQMSQuery.R")
-#funciton not ready yet, but sourcing it for when it is
-#source("CopperBLM_Function.R")
+#contains function to transform data into proper units and format to run through Copper BLM Model
+source("CuBLM_Transform_Function.R")
 
 # Query out the valid values ---------------------------------------------
 
@@ -240,7 +238,7 @@ server <- function(input, output) {
    mer
    })
    
-   #take data, make a subtable for VIEWING so that we only show the desired columns from the AWQMS data pull and in the desired order
+   #take data, make a subtable for VIEWING in the shiny app so it only shows desired columns from the AWQMS pull in desired order
    tsub<-eventReactive(input$goButton,{
      tsub<-select(data(),Org_Name,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
                SampleSubmedia,Activity_Type,Statistical_Base,Char_Name,Char_Speciation,
@@ -257,6 +255,13 @@ server <- function(input, output) {
                  MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
                  Activity_Comment,Result_Comment,Result_status,Result_Type)
      dsub
+   })
+   
+   #transform data for Copper BLM
+   copper<-eventReactive(input$goButton,{
+     cu<-CuBLM(data())
+     
+     cu
    })
    
    #take data, make subtable just for RPA data
@@ -385,6 +390,8 @@ output$downloadData <- downloadHandler(
     write.xlsx(dsub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
     #sheet with just RPA format
     #write.xlsx(rpa(),file,sheetName="RPA_Data",row.names=FALSE,showNA=FALSE,append=TRUE)
+    #sheet for copper BLM data
+    write.xlsx(copper(),file,sheetName="Copper BLM",row.names=FALSE,showNA=FALSE,append=TRUE)
     })
 
 }
