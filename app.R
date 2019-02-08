@@ -196,7 +196,9 @@ ui <- fluidPage(
         # Aliana added a data table
         tabPanel("Table",dataTableOutput("table")),
         #add leaflet map
-        tabPanel("Map",leafletOutput("locs"))
+        tabPanel("Map",leafletOutput("locs")),
+        #add copper blm output for now, to troubleshoot
+        tabPanel("CuBLM",dataTableOutput("CuBLM"))
         )
    )
 ))
@@ -264,12 +266,18 @@ server <- function(input, output) {
      cu
    })
    
+   #table of CuBLM data for Shiny app view
+   output$CuBLM<-renderDataTable({
+     
+     copper()
+   })
+   
    #take data, make subtable just for RPA data
   # rpa<-eventReactive(input$goButton,{
    #  rpa<-select(data(),)
   # })
    
-   #table of queried data      
+   #table of queried data for Shiny app view  
    output$table<-renderDataTable({
      
     tsub()
