@@ -15,10 +15,11 @@ NPDES_AWQMS_Qry<-function
     stop("Need to input startdate")
   }
   
-  query <- "SELECT OrganizationID,Org_Name,Project1,StationDes, MLocID,Lat_DD,Long_DD,MonLocType,HUC8_Name,act_id,SampleStartDate,SampleMedia,
+  query <- "SELECT OrganizationID,Org_Name,Project1,StationDes, MLocID,Lat_DD,Long_DD,MonLocType,
+  HUC8_Name,act_id,SampleStartDate,SampleStartTime,SampleMedia,
   SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
   Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
-  MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,Activity_Comment,Result_Comment,Result_status,Result_Type\n  
+  MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,Activity_Comment,Result_Comment,Result_status,Result_Type,Result_UID\n  
   FROM [awqms].[dbo].[VW_AWQMS_Results]\n  
   WHERE SampleStartDate >= Convert(datetime, {startdate})"
   if (length(enddate) > 0) {
