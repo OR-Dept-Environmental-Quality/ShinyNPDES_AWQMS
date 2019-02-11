@@ -19,15 +19,21 @@ CuBLM<-function(x) {
   char<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
           "Temperature, water","Total Sulfate","Sulfide")
   
+  #remove any samples that are calculated from continuous data (eg. 7 day min)
   y<-subset(x,x$Char_Name %in% char & is.na(x$Statistical_Base)) #& 
   
   #combine name and sample fraction, otherwise we get a bunch of rows we don't need
-  #mostly interested in whether an analyte is Total Recoverable or Dissolved, can leave out some of the other Sample Fractions
-  y$Char_Name<-ifelse(!(is.na(y$Sample_Fraction)|
-                          y$Sample_Fraction %in% "Filtered, field"|
-                          y$Sample_Fraction %in% "Filtered, lab"),
-                      paste0(y$Char_Name,",",y$Sample_Fraction),
-                      y$Char_Name)
+  #mostly interested in whether an analyte is Total Recoverable or Dissolved, and only for metals
+  #can leave out some of the other Sample Fractions
+  y$Char_Name<-
+    case_when(y$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Organic carbon")~paste0(y$Char_Name,",",y$Sample_Fraction),
+              y$Char_Name %in% c("Alkalinity, total","Chloride","pH","Sulfate","Temperature, water","Total Sulfate","Sulfide")~y$Char_Name)
+    
+    #ifelse(!(is.na(y$Sample_Fraction)|
+    #                      y$Sample_Fraction %in% "Filtered, field"|
+    #                      y$Sample_Fraction %in% "Filtered, lab"),
+     #                 paste0(y$Char_Name,",",y$Sample_Fraction),
+     #                 y$Char_Name)
   
   #just want a subset of the columns, too many columns makes reshape very complicated
   x<-subset(y,select=c("Char_Name","Result","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1"))
