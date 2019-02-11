@@ -30,10 +30,10 @@ CuBLM<-function(x) {
                       y$Char_Name)
   
   #just want a subset of the columns, too many columns makes reshape very complicated
-  x<-subset(y,select=c("Char_Name","Result","SampleStartDate","SampleStartTime","OrganizationID","MLocID"))
+  x<-subset(y,select=c("Char_Name","Result","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1"))
   
   res<-reshape(x, timevar="Char_Name",
-               idvar=c("MLocID","SampleStartDate","SampleStartTime","OrganizationID"),
+               idvar=c("MLocID","SampleStartDate","SampleStartTime","OrganizationID","Project1"),
                direction="wide") 
   
   #note, if you get warnings with res saying that multiple rows match, look for duplicates in data  
