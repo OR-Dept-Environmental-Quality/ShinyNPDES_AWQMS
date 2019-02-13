@@ -24,16 +24,12 @@ CuBLM<-function(x) {
   
   #combine name and sample fraction, otherwise we get a bunch of rows we don't need
   #mostly interested in whether an analyte is Total Recoverable or Dissolved, and only for metals
-  #can leave out some of the other Sample Fractions
+  #can leave out some the other Sample Fractions
+  #may do further transformation. Data should be in dissolved fraction for BLM, but there are conversion factors. May add that in future iteration
   y$Char_Name<-
     case_when(y$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Organic carbon")~paste0(y$Char_Name,",",y$Sample_Fraction),
               y$Char_Name %in% c("Alkalinity, total","Chloride","pH","Sulfate","Temperature, water","Total Sulfate","Sulfide")~y$Char_Name)
     
-    #ifelse(!(is.na(y$Sample_Fraction)|
-    #                      y$Sample_Fraction %in% "Filtered, field"|
-    #                      y$Sample_Fraction %in% "Filtered, lab"),
-     #                 paste0(y$Char_Name,",",y$Sample_Fraction),
-     #                 y$Char_Name)
   
   #just want a subset of the columns, too many columns makes reshape very complicated
   x<-subset(y,select=c("Char_Name","Result","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1"))
