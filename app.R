@@ -26,41 +26,71 @@ source("CuBLM_Transform_Function.R")
 
 #NPDES only needs a limited # of Chars, this should help speed up the program
 
-chars <- c("All RPA Characteristics","Copper BLM Characteristics",".alpha.-Endosulfan ",".alpha.-Hexachlorocyclohexane ",
-           ".beta.-Endosulfan ",".beta.-Hexachlorocyclohexane ","1,1,1-Trichloroethane ","1,1,2,2-Tetrachloroethane ",
-           "1,1,2-Trichloroethane ","1,1-Dichloroethane ","1,1-Dichloroethylene ","1,2,3,4,5,6-Hexachlorocyclohexane",
-           "1,2,4,5-Tetrachlorobenzene ","1,2,4-Trichlorobenzene ","1,2-Dichloroethane ","1,2-Dichloropropane ","1,2-Diphenylhydrazine ",
-           "1,3-Dichloropropene","2,4,5-Trichlorophenol ","2,4,6-Trichlorophenol ","2,4-Dichlorophenol ","2,4-Dimethylphenol ",
-           "2,4-Dinitrophenol ","2,4-Dinitrotoluene ","2,6-Dinitrotoluene ","2-Chloroethyl vinyl ether ","2-Chloronaphthalene ",
-           "3,3'-Dichlorobenzidine ","4,6-Dinitro-o-cresol ","Acenaphthene ","Acenaphthylene ","Acrolein ","Aldrin ",
-           "Alkalinity, total","Allyl chloride ","Aluminum ","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen","Anthracene ",
-           "Antimony ","Aroclor 1016 ","Aroclor 1221 ","Aroclor 1232 ","Aroclor 1242 ","Aroclor 1248 ","Aroclor 1254 ","Aroclor 1260 ",
-           "Arsenic","Arsenic ion (3+) ","Arsenic, Inorganic","Azinphos-methyl ","Benz[a]anthracene ","Benzene ",
-           "Benzene Hexachloride, Beta (BHC)","Benzidine ","Benzo(b)fluoranthene ","Benzo[a]pyrene ","Benzo[ghi]perylene ",
-           "Benzo[k]fluoranthene ","Beryllium ","Biochemical oxygen demand, non-standard conditions",
-           "Biochemical oxygen demand, standard conditions","Bis(2-chloro-1-methylethyl) ether ","Bis(2-chloroethoxy)methane ",
-           "Bis(2-chloroethyl) ether ","Butyl benzyl phthalate ","Cadmium ","Calcium","Carbon tetrachloride ","Chlordane ","Chloride",
-           "Chlorobenzene ","Chlorodibromomethane ","Chloroethane ","Chloroform ","Chloromethane","Chlorpyrifos ","Chromium ",
-           "Chromium(III)","Chromium(VI) ","Chrysene ","Conductivity","Copper","Copper ","Cyanide ","Demeton ",
-           "Di(2-ethylhexyl) phthalate ","Dibenz[a,h]anthracene ","Dibutyl phthalate ","Dichlorobromomethane ","Dieldrin ",
-           "Diethyl phthalate ","Dimethyl phthalate ","Di-n-octyl phthalate ","Dissolved oxygen (DO)","Dissolved oxygen saturation",
-           "Endosulfan sulfate ","Endrin ","Endrin aldehyde ","Ethylbenzene ","Fluoranthene ","Fluorene ","Hardness, Ca, Mg",
-           "Hardness, carbonate","Hardness, non-carbonate","Heptachlor ","Heptachlor epoxide ","Hexachlorobenzene ","Hexachlorobutadiene ",
-           "Hexachlorocyclopentadiene ","Hexachloroethane ","Indeno[1,2,3-cd]pyrene ","Inorganic nitrogen (nitrate and nitrite)","Iron ",
-           "Isophorone ","Kjeldahl nitrogen","Lead ","Lindane ","Magnesium","Malathion ","m-Dichlorobenzene ","Mercury ","Methoxychlor ",
-           "Methyl bromide ","Methylene chloride ","Mirex ","Naphthalene ","Nickel ","Nitrate ","Nitrate + Nitrite","Nitrobenzene ",
-           "N-Nitrosodimethylamine ","N-Nitrosodi-n-propylamine ","N-Nitrosodiphenylamine ","o-Chlorophenol ","o-Dichlorobenzene ",
-           "o-Nitrophenol ","Organic carbon","p,p'-DDD ","p,p'-DDE ","p,p'-DDT ","Parathion ","p-Bromophenyl phenyl ether ",
-           "p-Chloro-m-cresol ","p-Chlorophenyl phenyl ether ","p-Dichlorobenzene ","Pentachlorobenzene ","Pentachlorophenol ","pH",
-           "Phenanthrene ","Phenol ","p-Nitrophenol ","Potassium","Pyrene ","Salinity","Selenium ","Silver ","Sodium","Sulfate","Sulfide",
-           "Temperature, water","Tetrachloroethene ","Tetrachloroethylene ","Thallium ","Toluene ","Total hardness","Total Kjeldahl nitrogen",
-           "Total Sulfate","Toxaphene ","trans-1,2-Dichloroethylene ","Tribromomethane ","Trichloroethene (TCE) ","Vinyl chloride ","Zinc ")
+#make it so only the groupings are shown in the drop down, 
+#have the actual characteristics in separate variables to be called by program
+chars <- c("All RPA","All Toxics","Copper BLM","ph RPA","Ammonia RPA","DO RPA","Pesticides and PCB RPA","Base Neutral RPA", "Acid Extractable RPA",
+           "VOC RPA","Metals RPA")
 
+#RPA specific characteristics
+#pH RPA
+phrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity")
+
+#Ammonia RPA
+ammrpa<-c("Alkalinity, total","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen","Conductivity","pH","Temperature, water","Salinity")
+
+#Copper BLM
+cuB<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
+       "Temperature, water","Total Sulfate","Sulfide")
+
+#Dissolved Oxygen RPA
+dorpa<-c("Dissolved oxygen (DO)","Dissolved oxygen saturation","Biochemical oxygen demand, non-standard conditions",
+         "Biochemical oxygen demand, standard conditions","Kjeldahl nitrogen","Total Kjeldahl nitrogen","Temperature, water",
+         "Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")  
+
+#Pesticides and PCBs
+pestrpa<-c("p,p'-DDT","Parathion","Chlordane","Lindane","Dieldrin","Endrin","Methoxychlor","p,p'-DDD","p,p'-DDE","Heptachlor",
+           "Azinphos-methyl","Malathion","Aldrin",".alpha.-Hexachlorocyclohexane",".beta.-Hexachlorocyclohexane",
+           "Benzene Hexachloride, Beta (BHC)","1,2,3,4,5,6-Hexachlorocyclohexane",".alpha.-Endosulfan","Heptachlor epoxide",
+           "Endosulfan sulfate","Mirex","Chlorpyrifos","Endrin aldehyde","Toxaphene","Demeton","Aroclor 1260","Aroclor 1254",
+           "Aroclor 1221","Aroclor 1232","Aroclor 1248","Aroclor 1016",".beta.-Endosulfan","Aroclor 1242")
+
+#Base Neutral
+bneut<-c("Benzo[a]pyrene","Dibenz[a,h]anthracene","Benz[a]anthracene","N-Nitrosodimethylamine","Hexachloroethane",
+         "Hexachlorocyclopentadiene","Isophorone","Acenaphthene","Diethyl phthalate","Dibutyl phthalate","Phenanthrene",
+         "Butyl benzyl phthalate","N-Nitrosodiphenylamine","Fluorene","Hexachlorobutadiene","Naphthalene","2-Chloronaphthalene",
+         "3,3'-Dichlorobenzidine","Benzidine","1,2,4,5-Tetrachlorobenzene","Nitrobenzene","p-Bromophenyl phenyl ether",
+         "Bis(2-chloro-1-methylethyl) ether","Bis(2-chloroethyl) ether","Bis(2-chloroethoxy)methane","Di(2-ethylhexyl) phthalate",
+         "Di-n-octyl phthalate","Hexachlorobenzene","Anthracene","1,2,4-Trichlorobenzene","2,4-Dinitrotoluene","1,2-Diphenylhydrazine",
+         "Pyrene","Dimethyl phthalate","Benzo[ghi]perylene","Indeno[1,2,3-cd]pyrene","Benzo(b)fluoranthene","Fluoranthene",
+         "Benzo[k]fluoranthene","Acenaphthylene","Chrysene","2,6-Dinitrotoluene","Pentachlorobenzene","N-Nitrosodi-n-propylamine",
+         "p-Chlorophenyl phenyl ether")
+
+#Acid Extractable
+aext<-c("2,4-Dinitrophenol","p-Chloro-m-cresol","Pentachlorophenol","2,4,6-Trichlorophenol","o-Nitrophenol","o-Chlorophenol",
+        "2,4,5-Trichlorophenol","p-Nitrophenol","2,4-Dimethylphenol","Phenol","2,4-Dichlorophenol","4,6-Dinitro-o-cresol")
+
+#Volatile Organic Carbons
+vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane","Methyl bromide","Chloromethane","Chloroethane",
+          "Vinyl chloride","Methylenechloride","Tribromomethane","Dichlorobromomethane","1,1-Dichloroethane","1,1-Dichloroethylene",
+          "1,2-Dichloropropane","1,1,2-Trichloroethane","Trichloroethene(TCE)","1,1,2,2-Tetrachloroethane","o-Dichlorobenzene",
+          "Ethylbenzene","p-Dichlorobenzene","Acrolein","Allyl chloride","1,2-Dichloroethane","Toluene","Chlorobenzene",
+          "2-Chloroethyl vinyl ether","Chlorodibromomethane","Tetrachloroethene","Tetrachloroethylene","trans-1,2-Dichloroethylene",
+          "m-Dichlorobenzene","1,3-Dichloropropene")
+
+#Metals and Hardness
+metalsrpa<-c("Cyanide","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
+             "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
+             "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
+             "Hardness, carbonate","Hardness, non-carbonate","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")
+
+#all toxics (metals, voc, acid extractable, base neutral,pesticides and PCBs,metals)
+tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
+
+#one-off characteristics of interest
+oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB))
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
-# 
-
 if(!file.exists("query_cache.RData") | 
    difftime(Sys.Date() ,file.mtime("query_cache.RData") , units = c("days")) > 7){
   
@@ -126,12 +156,18 @@ ui <- fluidPage(
         dateInput("endd",
                   label = "Select End Date",
                   min = '1900-1-1'),
-       #characteristics
+       
+        #characteristics
          selectizeInput("characteristics",
-                     "Select characteristics",
+                     "Select RPA Group (pick one only)",
                      choices = chars,
-                     multiple = TRUE,
-                     selected="All RPA Characteristics"),
+                     multiple = FALSE,
+                     selected="All RPA"),
+       #specific characteristics outside of groups
+         selectizeInput("oneoff",
+                        "Specific Characteristics not part of groupings",
+                        choices=oneoff,
+                        multiple=TRUE),
 
        # Monitoring locations 
         selectizeInput("monlocs",
@@ -216,12 +252,23 @@ server <- function(input, output) {
    rstdt<-toString(sprintf("%s",input$startd))
    rendd<-toString(sprintf("%s",input$endd))
    rrej<-if(input$Reject) {TRUE} else {FALSE} 
-   rchar<-if(input$characteristics=="All RPA Characteristics") {chars} else {input$characteristics}
-   rchar<-if(input$characteristics=="Copper BLM Characteristics") 
-     {c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
-     "Temperature, water","Total Sulfate","Sulfide")} else {input$characteristics}
    
-
+   #build characteristic list
+   gch<-switch(input$characteristics,"All RPA"=unique(c(phrpa,ammrpa,cuB,dorpa,pestrpa,bneut,aext,vocrpa,metalsrpa)),
+                 "Copper BLM"=cuB,   
+                 "ph RPA"=phrpa,
+                 "Ammonia RPA"=ammrpa,
+                 "DO RPA"=dorpa,
+                 "Pesticides and PCB RPA"=pestrpa,
+                 "Base Neutral RPA"=bneut,
+                 "Acid Extractable RPA"=aext,
+                 "VOC RPA"=vocrpa,
+                 "Metals RPA"=metalsrpa,
+                 "All Toxics"=tox)
+   one<-c(input$oneoff)
+   rchar<-c(gch,one)
+   
+   #actual query for data
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
                   char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
    
@@ -273,9 +320,10 @@ server <- function(input, output) {
    })
    
    #take data, make subtable just for RPA data
-  # rpa<-eventReactive(input$goButton,{
-   #  rpa<-select(data(),)
-  # })
+   rpa<-eventReactive(input$goButton,{
+     rpa<-select(data(),MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Char_Name,
+                 SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,Result_status)
+   })
    
    #table of queried data for Shiny app view  
    output$table<-renderDataTable({
@@ -305,10 +353,20 @@ server <- function(input, output) {
      rejected<-paste0("Is rejected data included?  ",if(input$Reject) {TRUE} else {FALSE})
      stations<- paste0("Stations = ",toString(sprintf("'%s'", input$monlocs)))
      monty<- paste0("Monitoring Location Types = ",toString(sprintf("'%s'", input$montype)))
-     charc<- paste0("Characteristics = ",toString(sprintf("'%s'", input$characteristics)))
+     charc<- paste0("RPA Group = ",toString(sprintf("'%s'", input$characteristics)))
+     onof<- paste0("Characteristics = ",toString(sprintf("'%s'", input$oneoff)))
      huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
      organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
-     allchar<- paste0("List of all potential RPA characteristics: ",toString(chars))
+     allchar<- paste0("List of all potential RPA characteristics (All Toxics includes Pesticides/PCB RPA, Base Neutral RPA, Acid Extractable RPA, VOC RPA, and Metals RPA) \n",
+                      "pH RPA: ",toString(phrpa), "\n\n",
+                      "Ammonia RPA: ",toString(ammrpa),"\n\n",
+                      "Copper BLM: ",toString(cuB),"\n\n",
+                      "Do RPA: ",toString(dorpa),"\n\n",
+                      "Pesticide and PCBs RPA: ",toString(pestrpa),"\n\n",
+                      "Base Neutral RPA: ",toString(bneut),"\n\n",
+                      "Acid Exractable RPA: ",toString(aext),"\n\n",
+                      "Volatile Organic Carbon RPA: ",toString(vocrpa), "\n\n",
+                      "Metals and Hardness RPA: ",toString(metalsrpa))
      
      #create workbook and sheet
      wb<-createWorkbook()
@@ -353,7 +411,7 @@ server <- function(input, output) {
                    titleStyle = SUB_TITLE_STYLE)
      
      #Create Cell Block and populate the rows with the parameters
-     cells<-CellBlock(sheet,6,1,10,1)
+     cells<-CellBlock(sheet,6,1,11,1)
      CB.setRowData(cells,startdt,1)
      CB.setRowData(cells,enddt,2)
      CB.setRowData(cells,stations,3)
@@ -362,10 +420,8 @@ server <- function(input, output) {
      CB.setRowData(cells,huc8s,6)
      CB.setRowData(cells,organiz,7)
      CB.setRowData(cells,rejected,8)
-     if(input$characteristics=="All RPA Characteristics") {
-       CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
-       }
-     setColumnWidth(sheet,1,120)
+     CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
+     setColumnWidth(sheet,1,200)
      
      #add the leaflet map as a sheet in the download excel
      map<-leaflet(data()) %>%
@@ -397,9 +453,9 @@ output$downloadData <- downloadHandler(
     #sheet with data
     write.xlsx(dsub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
     #sheet with just RPA format
-    #write.xlsx(rpa(),file,sheetName="RPA_Data",row.names=FALSE,showNA=FALSE,append=TRUE)
+    write.xlsx(rpa(),file,sheetName="RPA_Data_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
     #sheet for copper BLM data
-    write.xlsx(copper(),file,sheetName="Copper BLM",row.names=FALSE,showNA=FALSE,append=TRUE)
+    write.xlsx(copper(),file,sheetName="Copper_BLM_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
     })
 
 }
