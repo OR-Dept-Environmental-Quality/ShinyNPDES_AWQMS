@@ -3,21 +3,21 @@
     
 CuBLM<-function(x) {
   #x is table output from NPDES_AWQMSQuery.R
-  source("CuBLM_UnitConvert_Function.R")
+  source("UnitConvert_Function.R")
   #need to limit data to only CuBLM parameters and also exclude summary statistics 
   char<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
           "Temperature, water","Total Sulfate","Sulfide")
   x<-subset(x,x$Char_Name %in% char & is.na(x$Statistical_Base))
   
   #Need to check units
-  x<-BLMunit_conv(x,"Temperature, water","deg F","deg C")
-  x<-BLMunit_conv(x,c("Calcium","Chloride","Magnesium","Potassium","Sodium","Sulfate","Organic carbon","Total Sulfate","Sulfide"),"ug/l","mg/l")
-  x<-BLMunit_conv(x,"Copper","mg/l","ug/l")
+  x<-unit_conv(x,"Temperature, water","deg F","deg C")
+  x<-unit_conv(x,c("Calcium","Chloride","Magnesium","Potassium","Sodium","Sulfate","Organic carbon","Total Sulfate","Sulfide"),"ug/l","mg/l")
+  x<-unit_conv(x,"Copper","mg/l","ug/l")
   
   
   # only take the analytes we're interested in 
   char<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
-          "Temperature, water","Total Sulfate","Sulfide")
+          "Temperature, water","Total Sulfate","Sulfide","Salinity","Conductivity")
   
   #remove any samples that are calculated from continuous data (eg. 7 day min)
   y<-subset(x,x$Char_Name %in% char & is.na(x$Statistical_Base)) #& 
@@ -25,10 +25,9 @@ CuBLM<-function(x) {
   #combine name and sample fraction, otherwise we get a bunch of rows we don't need
   #mostly interested in whether an analyte is Total Recoverable or Dissolved, and only for metals
   #can leave out some the other Sample Fractions
-  #may do further transformation. Data should be in dissolved fraction for BLM, but there are conversion factors. May add that in future iteration
   y$Char_Name<-
     case_when(y$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Organic carbon")~paste0(y$Char_Name,",",y$Sample_Fraction),
-              y$Char_Name %in% c("Alkalinity, total","Chloride","pH","Sulfate","Temperature, water","Total Sulfate","Sulfide")~y$Char_Name)
+              y$Char_Name %in% c("Alkalinity, total","Chloride","pH","Sulfate","Temperature, water","Total Sulfate","Sulfide","Salinity","Conductivity")~y$Char_Name)
     
   
   #just want a subset of the columns, too many columns makes reshape very complicated
