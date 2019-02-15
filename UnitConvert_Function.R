@@ -56,4 +56,4 @@ unit_conv<-function(x,char,unit,conv){
 #test2<-unit_conv(x,"Copper","mg/l","ug/l")
 
 #y<-AWQMS_Data(startdate = "2000-01-01", enddate = "2019-01-01", station = NULL, char = NULL, org = "GP-WM", 
-                   HUC8 = NULL, HUC8_Name = NULL)
+ #                  HUC8 = NULL, HUC8_Name = NULL)
