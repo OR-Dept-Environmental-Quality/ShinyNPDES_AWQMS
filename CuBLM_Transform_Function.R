@@ -3,16 +3,16 @@
     
 CuBLM<-function(x) {
   #x is table output from NPDES_AWQMSQuery.R
-  source("CuBLM_UnitConvert_Function.R")
+  source("UnitConvert_Function.R")
   #need to limit data to only CuBLM parameters and also exclude summary statistics 
   char<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
           "Temperature, water","Total Sulfate","Sulfide")
   x<-subset(x,x$Char_Name %in% char & is.na(x$Statistical_Base))
   
   #Need to check units
-  x<-BLMunit_conv(x,"Temperature, water","deg F","deg C")
-  x<-BLMunit_conv(x,c("Calcium","Chloride","Magnesium","Potassium","Sodium","Sulfate","Organic carbon","Total Sulfate","Sulfide"),"ug/l","mg/l")
-  x<-BLMunit_conv(x,"Copper","mg/l","ug/l")
+  x<-unit_conv(x,"Temperature, water","deg F","deg C")
+  x<-unit_conv(x,c("Calcium","Chloride","Magnesium","Potassium","Sodium","Sulfate","Organic carbon","Total Sulfate","Sulfide"),"ug/l","mg/l")
+  x<-unit_conv(x,"Copper","mg/l","ug/l")
   
   
   # only take the analytes we're interested in 
