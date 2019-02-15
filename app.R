@@ -25,6 +25,8 @@ library(sf)
 source("NPDES_AWQMSQuery.R")
 #contains function to transform data into proper units and format to run through Copper BLM Model
 source("CuBLM_Transform_Function.R")
+#unit function, need it for RPA
+source("UnitConvert_Function.R")
 
 # Query out the valid values ---------------------------------------------
 
