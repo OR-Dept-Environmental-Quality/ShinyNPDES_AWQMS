@@ -13,6 +13,10 @@ library(xlsx)
 library(dplyr)
 library(xlsxjars)
 library(mapview)
+library(leaflet.extras)
+library(mapedit)
+library(sf)
+
 
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
@@ -232,9 +236,7 @@ ui <- fluidPage(
         # Aliana added a data table
         tabPanel("Table",dataTableOutput("table")),
         #add leaflet map
-        tabPanel("Map",leafletOutput("locs")),
-        #add copper blm output for now, to troubleshoot
-        tabPanel("CuBLM",dataTableOutput("CuBLM"))
+        tabPanel("Map",leafletOutput("locs"))
         )
    )
 ))
@@ -321,8 +323,28 @@ server <- function(input, output) {
    
    #take data, make subtable just for RPA data
    rpa<-eventReactive(input$goButton,{
-     rpa<-select(data(),MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Char_Name,
-                 SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,Result_status)
+     #RPA columns in proper order (plus some), remove temperature, DO, pH and other non-toxics RPA characteristics
+     rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved Oxygen","Organic carbon")),
+                 select=c(MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Method_Context,Char_Name,Sample_Fraction,
+                          SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
+    
+       #combine method_code and method_Context columns
+     rpa$Method_Code<-paste0(rpa$Method_Code," (",rpa$Method_Context,")")
+
+     #combine Char_Name and Sample_Fraction for just metals
+     rpa$Char_Name<-
+       ifelse(rpa$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
+                                         "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
+                                         "Zinc","Selenium","Chromium(III)","Chromium(VI","Arsenic ion (3+)"),
+              paste0(rpa$Char_Name,", ",rpa$Sample_Fraction),
+              rpa$Char_Name)
+     
+    #remove Sample Fraction and Method Context Rows
+     rpa<-subset(rpa,select=c(MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Char_Name,
+                              SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
+     
+     rpa
+     
    })
    
    #table of queried data for Shiny app view  
@@ -332,17 +354,37 @@ server <- function(input, output) {
    })
    
    #leaflet map
-   output$locs<-renderLeaflet({
-     
+   mymap<- eventReactive(input$goButton,{   
      leaflet(data()) %>%
-       addTiles()%>%
-       addMarkers(lng=~Long_DD,
-                  lat=~Lat_DD,
-                  popup=paste("Station ID: ",data()$MLocID,"<br>",
-                              "Description: ",data()$StationDes,"<br>",
-                              "Characteristics: ",data()$type,"<br>"),
-                  popupOptions= popupOptions(maxHeight = 75))
+     addTiles()%>%
+     addMarkers(lng=~Long_DD,
+                lat=~Lat_DD,
+                popup=paste("Station ID: ",data()$MLocID,"<br>",
+                            "Description: ",data()$StationDes,"<br>",
+                            "Characteristics: ",data()$type,"<br>"),
+                popupOptions= popupOptions(maxHeight = 75)) %>%
+     #want to be able to select points on map via polygon.
+     #first step is to be able to draw polygon on map
+     addDrawToolbar(editOptions = editToolbarOptions())
    })
+   
+   #show map in shiny viewer
+   output$locs<-renderLeaflet({ mymap()})
+  
+   #step two to be able to select points on map via polygon: get the bounds of the polygon
+   # Show summary information for debuging only
+   #coords<-eventReactive(input$mymap_draw_new_feature,
+   #                    { print(str(input$mymap_draw_new_feature))})
+   #output$summary <- renderPrint({coords()})
+  
+   
+   #doesn't seem to work, wants to call a shiny within a shiny- no go
+   #convert points to sf object so we can select them
+   #pts<-st_as_sf(data(),coords=c("Lat_DD","Long_DD"),remove=FALSE)
+   #selectFeatures(pts,map=map,mode="draw",viewer=NULL)
+  
+   
+   
 
    #create list of the parameters in query, try to get it into a formatted excel to export
    param<-eventReactive(input$goButton, {
@@ -421,7 +463,7 @@ server <- function(input, output) {
      CB.setRowData(cells,organiz,7)
      CB.setRowData(cells,rejected,8)
      CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
-     setColumnWidth(sheet,1,200)
+     setColumnWidth(sheet,1,220)
      
      #add the leaflet map as a sheet in the download excel
      map<-leaflet(data()) %>%
