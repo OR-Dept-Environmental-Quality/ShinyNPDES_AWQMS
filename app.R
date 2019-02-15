@@ -16,6 +16,7 @@ library(mapview)
 library(leaflet.extras)
 library(mapedit)
 library(sf)
+library(shinybusy)
 
 
 
@@ -241,7 +242,9 @@ ui <- fluidPage(
         tabPanel("Map",leafletOutput("locs"))
         )
    )
-))
+),
+
+add_busy_spinner(spin = "fading-circle"))
 
 # Define server logic required to display query
 server <- function(input, output) {
