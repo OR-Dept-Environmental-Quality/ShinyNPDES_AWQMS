@@ -19,32 +19,32 @@ unit_conv<-function(x,char,unit,conv){
   x$Result_Unit<-case_when(x$Char_Name %in% char & x$Result_Unit==unit & unit=="deg F" & conv=="deg C"~"deg C",
                            x$Char_Name %in% char & x$Result_Unit==unit & unit=="ug/l" & conv=="mg/l"~"mg/l",
                            x$Char_Name %in% char & x$Result_Unit==unit & unit=="mg/l" & conv=="ug/l"~"ug/l",
-                           x$Char_Name %in% char & x$Result_Unit==unit & unit=="ng/l" & conv=="ug/l"~"ug/l"
+                           x$Char_Name %in% char & x$Result_Unit==unit & unit=="ng/l" & conv=="ug/l"~"ug/l",
                            !(x$Char_Name %in% char & x$Result_Unit==unit)~x$Result_Unit)
  
    #change MDL and MRL values and units
   x$MDLValue<-case_when(x$Char_Name %in% char & x$MDLUnit==unit & unit=="deg F" & conv=="deg C"~((x$MDLValue-32)*0.5556),
                         x$Char_Name %in% char & x$MDLUnit==unit & unit=="ug/l" & conv=="mg/l"~(x$MDLValue*0.001),
                         x$Char_Name %in% char & x$MDLUnit==unit & unit=="mg/l" & conv=="ug/l"~(x$MDLValue*1000),
-                        x$Char_Name %in% char & x$MDLUnit==unit & unit=="ng/l" & conv=="ug/l"~(x$Result_Numeric/1000),
+                        x$Char_Name %in% char & x$MDLUnit==unit & unit=="ng/l" & conv=="ug/l"~(x$MDLValue/1000),
                         !(x$Char_Name %in% char & x$MDLUnit==unit)~x$MDLValue)
   
   x$MDLUnit<-case_when(x$Char_Name %in% char& x$MDLUnit==unit & unit=="deg F"& conv=="deg C"~"deg C",
                        x$Char_Name %in% char& x$MDLUnit==unit & unit=="ug/l"& conv=="mg/l"~"mg/l",
                        x$Char_Name %in% char& x$MDLUnit==unit & unit=="mg/l"&conv=="ug/l"~"ug/l",
-                       x$Char_Name %in% char & x$MDLUnit==unit & unit=="ng/l" & conv=="ug/l"~"ug/l"
+                       x$Char_Name %in% char & x$MDLUnit==unit & unit=="ng/l" & conv=="ug/l"~"ug/l",
                        !(x$Char_Name %in% char&x$MDLUnit==unit)~x$MDLUnit)
   
   x$MRLValue<-case_when(x$Char_Name %in% char & x$MRLUnit==unit & unit=="deg F"& conv=="deg C"~((x$MRLValue-32)*0.5556),
                         x$Char_Name %in% char & x$MRLUnit==unit & unit=="ug/l"& conv=="mg/l"~(x$MRLValue*0.001),
                         x$Char_Name %in% char & x$MRLUnit==unit & unit=="mg/l"&conv=="ug/l"~(x$MRLValue*1000),
-                        x$Char_Name %in% char & x$MRLUnit==unit & unit=="ng/l" & conv=="ug/l"~(x$Result_Numeric/1000),
+                        x$Char_Name %in% char & x$MRLUnit==unit & unit=="ng/l" & conv=="ug/l"~(x$MRLValue/1000),
                         !(x$Char_Name %in% char & x$MRLUnit==unit)~x$MRLValue)
   
   x$MRLUnit<-case_when(x$Char_Name %in% char & x$MRLUnit==unit & unit=="deg F"& conv=="deg C"~"deg C",
                        x$Char_Name %in% char & x$MRLUnit==unit & unit=="ug/l"& conv=="mg/l"~"mg/l",
-                       x$Char_Name %in% char & x$MRLUnit==unit & unit=="mg/l"&conv=="ug/l"~"ug/l",
-                       x$Char_Name %in% char & x$MRLUnit==unit & unit=="ng/l" & conv=="ug/l"~"ug/l"
+                       x$Char_Name %in% char & x$MRLUnit==unit & unit=="mg/l"& conv=="ug/l"~"ug/l",
+                       x$Char_Name %in% char & x$MRLUnit==unit & unit=="ng/l" & conv=="ug/l"~"ug/l",
                        !(x$Char_Name %in% char & x$MRLUnit==unit)~x$MRLUnit)
                         
   

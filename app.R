@@ -17,8 +17,13 @@ library(leaflet.extras)
 library(mapedit)
 library(sf)
 library(shinybusy)
+#library(stringr)
 
+#attempt to turn off scientific notation
+options(scipen=999)
 
+#in case the shinybusy package needs to be installed/reinstalled
+#remotes::install_github("dreamRs/shinybusy")
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -329,13 +334,23 @@ server <- function(input, output) {
    #take data, make subtable just for RPA data
    rpa<-eventReactive(input$goButton,{
      #RPA columns in proper order (plus some), remove temperature, DO, pH and other non-toxics RPA characteristics
-     rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved Oxygen","Organic carbon")),
+     rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)","Dissolved oxygen saturation","Salinity","Organic carbon")),
                  select=c(MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Method_Context,Char_Name,Sample_Fraction,
-                          SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
+                          SampleMedia,SampleStartDate,Result,Result_Numeric,MRLValue,MDLValue,MRLUnit,MDLUnit,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
     
        #combine method_code and method_Context columns
      rpa$Method_Code<-paste0(rpa$Method_Code," (",rpa$Method_Context,")")
 
+     #need to do unit conversions, al in ug/l, except for Alkalinity, which should be in mg/L
+     #checked AWQMS database, all alkalinity is reported in mg/l or mg/l CaCO3, no need for conversion
+     #get list of char names in RPA
+     names<-unique(rpa$Char_Name)
+     #remove alkalinity, that needs to stay as mg/l
+     names<-names[names !="Alkalinity, total"]
+    
+     rpa<-unit_conv(rpa,names,"mg/l","ug/l")
+     rpa<-unit_conv(rpa,names,"ng/l","ug/l")
+     
      #combine Char_Name and Sample_Fraction for just metals
      rpa$Char_Name<-
        ifelse(rpa$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
@@ -344,11 +359,19 @@ server <- function(input, output) {
               paste0(rpa$Char_Name,", ",rpa$Sample_Fraction),
               rpa$Char_Name)
      
-    #remove Sample Fraction and Method Context Rows
-     rpa<-subset(rpa,select=c(MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Char_Name,
-                              SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
+    #add SampleAlias column, leave with dashes in it as placeholder (it's a column in the RPA doc, but no one can tell me what it actually is)
+     rpa$SampleAlias<-"--"
      
-     rpa
+    #remove Sample Fraction, Result_Numeric,MRL Unit, MDL Unit, and Method Context Rows, change order so that it is more in line with RPA
+     rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,SampleAlias,Activity_Type,Method_Code,Char_Name,
+                              SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
+                              Result_status,MLocID,StationDes,MonLocType,Result_Comment))
+     
+     
+     #need to remove dashes from CASNumber row
+     rpa$CASNumber<-gsub("-","",rpa$CASNumber)
+     
+     return(rpa)
      
    })
    
