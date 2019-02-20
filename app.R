@@ -28,10 +28,9 @@ options(scipen=999)
 #plus, for NPDES only need a subset of data- 
 #the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types
 source("NPDES_AWQMSQuery.R")
-#contains function to transform data into proper units and format to run through Copper BLM Model
-#source("CuBLM_Transform_Function.R")
-#unit function, need it for RPA
-#source("UnitConvert_Function.R")
+#contains function to transform data into proper units and format to run through Ammonia RPA
+source("Ammonia_RPA_Transform.R")
+
 
 # Query out the valid values ---------------------------------------------
 
@@ -324,11 +323,6 @@ server <- function(input, output) {
      cu
    })
    
-   #table of CuBLM data for Shiny app view
-   output$CuBLM<-renderDataTable({
-     
-     copper()
-   })
    
    #take data, make subtable just for RPA data
    rpa<-eventReactive(input$goButton,{
@@ -358,13 +352,11 @@ server <- function(input, output) {
               paste0(rpa$Char_Name,", ",rpa$Sample_Fraction),
               rpa$Char_Name)
      
-    #add SampleAlias column, leave with dashes in it as placeholder (it's a column in the RPA doc, but no one can tell me what it actually is)
-     rpa$SampleAlias<-"--"
      
     #remove Sample Fraction, Result_Numeric,MRL Unit, MDL Unit, and Method Context Rows, change order so that it is more in line with RPA
-     rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,SampleAlias,Activity_Type,Method_Code,Char_Name,
+     rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
-                              Result_status,MLocID,StationDes,MonLocType,Result_Comment))
+                              Result_status,MLocID,MonLocType,Result_Comment))
      
      
      #need to remove dashes from CASNumber row
@@ -372,6 +364,14 @@ server <- function(input, output) {
      
      return(rpa)
      
+   })
+   
+   #ammonia RPA output, similar to Copper BLM output
+   amm<-eventReactive(input$goButton,{
+     
+     am<-amRPA(data())
+     
+     am
    })
    
    #table of queried data for Shiny app view  
@@ -525,6 +525,8 @@ output$downloadData <- downloadHandler(
     write.xlsx(rpa(),file,sheetName="RPA_Data_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
     #sheet for copper BLM data
     write.xlsx(copper(),file,sheetName="Copper_BLM_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
+    #sheet for Ammonia RPA
+    write.xlsx(amm(),file,sheetName="Ammonia_RPA_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
     })
 
 }
