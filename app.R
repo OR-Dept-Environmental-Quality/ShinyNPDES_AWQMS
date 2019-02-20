@@ -17,7 +17,6 @@ library(leaflet.extras)
 library(mapedit)
 library(sf)
 library(shinybusy)
-#library(stringr)
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -30,9 +29,9 @@ options(scipen=999)
 #the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types
 source("NPDES_AWQMSQuery.R")
 #contains function to transform data into proper units and format to run through Copper BLM Model
-source("CuBLM_Transform_Function.R")
+#source("CuBLM_Transform_Function.R")
 #unit function, need it for RPA
-source("UnitConvert_Function.R")
+#source("UnitConvert_Function.R")
 
 # Query out the valid values ---------------------------------------------
 
@@ -336,7 +335,7 @@ server <- function(input, output) {
      #RPA columns in proper order (plus some), remove temperature, DO, pH and other non-toxics RPA characteristics
      rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)","Dissolved oxygen saturation","Salinity","Organic carbon")),
                  select=c(MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Method_Context,Char_Name,Sample_Fraction,
-                          SampleMedia,SampleStartDate,Result,Result_Numeric,MRLValue,MDLValue,MRLUnit,MDLUnit,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
+                          SampleMedia,SampleStartDate,Result,Result_Numeric,Result_Operator,MRLValue,MDLValue,MRLUnit,MDLUnit,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
     
        #combine method_code and method_Context columns
      rpa$Method_Code<-paste0(rpa$Method_Code," (",rpa$Method_Context,")")
@@ -355,7 +354,7 @@ server <- function(input, output) {
      rpa$Char_Name<-
        ifelse(rpa$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
                                          "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
-                                         "Zinc","Selenium","Chromium(III)","Chromium(VI","Arsenic ion (3+)"),
+                                         "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)"),
               paste0(rpa$Char_Name,", ",rpa$Sample_Fraction),
               rpa$Char_Name)
      
