@@ -1,4 +1,5 @@
-#query designed specifically for NPDES permit writers for RPA analysis. It calls necessary data from VW_AWQMS_Results using an ODBC connection
+#query designed specifically for NPDES permit writers for RPA analysis. 
+#It calls necessary data from VW_AWQMS_Results using an ODBC connection
 #this query is based off of Travis Pritchard's AWQMS_Data query
 #This query will only return Water data from the following station types:
 #'BEACH Program Site-Ocean','BEACH Program Site-River/Stream',

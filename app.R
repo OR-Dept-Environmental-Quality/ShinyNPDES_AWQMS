@@ -13,9 +13,9 @@ library(xlsx)
 library(dplyr)
 library(xlsxjars)
 library(mapview)
-library(leaflet.extras)
-library(mapedit)
-library(sf)
+#library(leaflet.extras)
+#library(mapedit)
+#library(sf)
 library(shinybusy)
 
 #attempt to turn off scientific notation
@@ -36,12 +36,13 @@ source("Ammonia_RPA_Transform.R")
 
 #NPDES only needs a limited # of Chars, this should help speed up the program
 
-#make it so only the groupings are shown in the drop down, 
-#have the actual characteristics in separate variables to be called by program
+#make it so only the RPA groupings are shown in the drop down
+
 chars <- c("All RPA","All Toxics","Copper BLM","ph RPA","Ammonia RPA","DO RPA","Pesticides and PCB RPA","Base Neutral RPA", "Acid Extractable RPA",
            "VOC RPA","Metals RPA")
 
-#RPA specific characteristics
+#create variables with specific characteristics for the different groups
+
 #pH RPA
 phrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity")
 
@@ -62,7 +63,7 @@ pestrpa<-c("p,p'-DDT","Parathion","Chlordane","Lindane","Dieldrin","Endrin","Met
            "Azinphos-methyl","Malathion","Aldrin",".alpha.-Hexachlorocyclohexane",".beta.-Hexachlorocyclohexane",
            "Benzene Hexachloride, Beta (BHC)","1,2,3,4,5,6-Hexachlorocyclohexane",".alpha.-Endosulfan","Heptachlor epoxide",
            "Endosulfan sulfate","Mirex","Chlorpyrifos","Endrin aldehyde","Toxaphene","Demeton","Aroclor 1260","Aroclor 1254",
-           "Aroclor 1221","Aroclor 1232","Aroclor 1248","Aroclor 1016",".beta.-Endosulfan","Aroclor 1242")
+           "Aroclor 1221","Aroclor 1232","Aroclor 1248","Aroclor 1016",".beta.-Endosulfan","Aroclor 1242","Total PCBs")
 
 #Base Neutral
 bneut<-c("Benzo[a]pyrene","Dibenz[a,h]anthracene","Benz[a]anthracene","N-Nitrosodimethylamine","Hexachloroethane",
@@ -105,7 +106,7 @@ if(!file.exists("query_cache.RData") |
    difftime(Sys.Date() ,file.mtime("query_cache.RData") , units = c("days")) > 7){
   
 
-#NPDES_AWQMS_Stations functions only pulls stations 
+#NPDES_AWQMS_Stations functions only pulls stations of interest to NPDES program
 station <- NPDES_AWQMS_Stations()
 Mtype<-station$MonLocType
 station <- station$MLocID
@@ -115,6 +116,7 @@ organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- sort(organization)
 
+#save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
 save(station, Mtype, organization, file = 'query_cache.RData')
 } else {
   load("query_cache.RData")
@@ -185,7 +187,7 @@ ui <- fluidPage(
                         choices = station,
                         multiple = TRUE),
        
-       # Monitoring location types--this won't work unless I add monitoring type to NPDES query
+       # Monitoring location types
         selectizeInput("montype",
                        "Select Monitoring Location Types",
                        choices=Mtype,
@@ -209,9 +211,11 @@ ui <- fluidPage(
        checkboxInput("Reject",
                      label = "Keep Rejected data",
                      value = FALSE),
-       #add action button, idea is to not run query until the button is clicked)
+       
+       #add action button, so query doesn't run until button is clicked
        actionButton("goButton","Run Query"),
-       #add a download button
+       
+       #add a download button so we can download query results
        downloadButton('downloadData', 'Download Data')
         ),
 
@@ -247,6 +251,7 @@ ui <- fluidPage(
    )
 ),
 
+#add icon to show when program is running query or download
 add_busy_spinner(spin = "fading-circle"))
 
 # Define server logic required to display query
@@ -282,10 +287,10 @@ server <- function(input, output) {
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
                   char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
    
-   #want to add list of characteristics for each monitoring location to the popup, I think to do that we're going to have to pull 
+   #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
    #in data() and add a column that has all characteristic names for each monitoring location....
    #if I just add data$char_Names I only get the first char (usually temperature, water)
-   #able to do this by grouping via MLocID, then getting the unique chars via summarize
+   #able fix this by grouping via MLocID, then getting the unique chars via summarize
    #then merge the two dataframes together using MLocID, creates column called "type" that has chars
    grp<-dat %>% group_by(MLocID) %>% 
      summarize(type = paste(sort(unique(Char_Name)),collapse=", "))
@@ -316,6 +321,43 @@ server <- function(input, output) {
      dsub
    })
    
+   #table of queried data for Shiny app view  
+   output$table<-renderDataTable({
+     
+     tsub()
+   })
+   
+   #leaflet map
+   mymap<- eventReactive(input$goButton,{   
+     leaflet(data()) %>%
+       addTiles()%>%
+       addMarkers(lng=~Long_DD,
+                  lat=~Lat_DD,
+                  popup=paste("Station ID: ",data()$MLocID,"<br>",
+                              "Description: ",data()$StationDes,"<br>",
+                              "Characteristics: ",data()$type,"<br>"),
+                  popupOptions= popupOptions(maxHeight = 75)) %>%
+       #want to be able to select points on map via polygon.
+       #first step is to be able to draw polygon on map
+       addDrawToolbar(editOptions = editToolbarOptions())
+   })
+   
+   #show map in shiny viewer
+   output$locs<-renderLeaflet({ mymap()})
+   
+   #step two to be able to select points on map via polygon: get the bounds of the polygon
+   # Show summary information for debuging only
+   #coords<-eventReactive(input$mymap_draw_new_feature,
+   #                    { print(str(input$mymap_draw_new_feature))})
+   #output$summary <- renderPrint({coords()})
+   
+   
+   #doesn't seem to work, wants to call a shiny within a shiny- no go
+   #convert points to sf object so we can select them
+   #pts<-st_as_sf(data(),coords=c("Lat_DD","Long_DD"),remove=FALSE)
+   #selectFeatures(pts,map=map,mode="draw",viewer=NULL)
+   
+   
    #transform data for Copper BLM
    copper<-eventReactive(input$goButton,{
      cu<-CuBLM(data())
@@ -326,10 +368,9 @@ server <- function(input, output) {
    
    #take data, make subtable just for RPA data
    rpa<-eventReactive(input$goButton,{
-     #RPA columns in proper order (plus some), remove temperature, DO, pH and other non-toxics RPA characteristics
-     rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)","Dissolved oxygen saturation","Salinity","Organic carbon")),
-                 select=c(MLocID,StationDes,MonLocType,CASNumber,Project1,act_id,act_id,Activity_Type,Method_Code,Method_Context,Char_Name,Sample_Fraction,
-                          SampleMedia,SampleStartDate,Result,Result_Numeric,Result_Operator,MRLValue,MDLValue,MRLUnit,MDLUnit,Result_Unit,Analytical_Lab,Result_status, Result_Comment))
+     #remove temperature, DO, pH and other non-toxics RPA characteristics
+     rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)",
+                                           "Dissolved oxygen saturation","Salinity","Organic carbon")))
     
        #combine method_code and method_Context columns
      rpa$Method_Code<-paste0(rpa$Method_Code," (",rpa$Method_Context,")")
@@ -353,7 +394,7 @@ server <- function(input, output) {
               rpa$Char_Name)
      
      
-    #remove Sample Fraction, Result_Numeric,MRL Unit, MDL Unit, and Method Context Rows, change order so that it is more in line with RPA
+    #only take select rows, change order so that it is more in line with RPA
      rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,MLocID,MonLocType,Result_Comment))
@@ -374,46 +415,8 @@ server <- function(input, output) {
      am
    })
    
-   #table of queried data for Shiny app view  
-   output$table<-renderDataTable({
-     
-    tsub()
-   })
-   
-   #leaflet map
-   mymap<- eventReactive(input$goButton,{   
-     leaflet(data()) %>%
-     addTiles()%>%
-     addMarkers(lng=~Long_DD,
-                lat=~Lat_DD,
-                popup=paste("Station ID: ",data()$MLocID,"<br>",
-                            "Description: ",data()$StationDes,"<br>",
-                            "Characteristics: ",data()$type,"<br>"),
-                popupOptions= popupOptions(maxHeight = 75)) %>%
-     #want to be able to select points on map via polygon.
-     #first step is to be able to draw polygon on map
-     addDrawToolbar(editOptions = editToolbarOptions())
-   })
-   
-   #show map in shiny viewer
-   output$locs<-renderLeaflet({ mymap()})
-  
-   #step two to be able to select points on map via polygon: get the bounds of the polygon
-   # Show summary information for debuging only
-   #coords<-eventReactive(input$mymap_draw_new_feature,
-   #                    { print(str(input$mymap_draw_new_feature))})
-   #output$summary <- renderPrint({coords()})
-  
-   
-   #doesn't seem to work, wants to call a shiny within a shiny- no go
-   #convert points to sf object so we can select them
-   #pts<-st_as_sf(data(),coords=c("Lat_DD","Long_DD"),remove=FALSE)
-   #selectFeatures(pts,map=map,mode="draw",viewer=NULL)
-  
-   
-   
 
-   #create list of the parameters in query, try to get it into a formatted excel to export
+   #create list of the parameters in query, get it into a formatted excel to export so we have record of query
    param<-eventReactive(input$goButton, {
      
      #create strings for the input parameters
@@ -511,7 +514,8 @@ server <- function(input, output) {
    
 
 # Download button- only works in Chrome
-#gives an excel with two sheets, the first is the serach parameters (needs some work), the second is the data
+# gives an excel workbook with multiple sheets, the first is the serach parameters (needs some work), the second is the map,
+# the rest are data in various formats
 #set to give NAs as blank cells
 output$downloadData <- downloadHandler(
   
@@ -526,7 +530,7 @@ output$downloadData <- downloadHandler(
     #sheet for copper BLM data
     write.xlsx(copper(),file,sheetName="Copper_BLM_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
     #sheet for Ammonia RPA
-    write.xlsx(amm(),file,sheetName="Ammonia_RPA_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
+    if(length(amm()>0)) {write.xlsx(amm(),file,sheetName="Ammonia_RPA_Format",row.names=FALSE,showNA=FALSE,append=TRUE)}
     })
 
 }

@@ -1,12 +1,12 @@
 #ammonia RPA function to put AWQMS data into format conducive to Ammonia RPA analysis
 
 amRPA<-function(x){
-  #x is data table
+  # x is data table
+
   #Need to check units
   x<-unit_conv(x,"Temperature, water","deg F","deg C")
   x<-unit_conv(x,"Ammonia","ug/l","mg/l")
 
-  
   
   # only take the analytes we're interested in 
   char<-c("Alkalinity, total","pH","Temperature, water","Ammonia","Salinity","Ammonia-nitrogen",
