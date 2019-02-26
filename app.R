@@ -89,7 +89,7 @@ vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane",
           "m-Dichlorobenzene","1,3-Dichloropropene")
 
 #Metals and Hardness
-metalsrpa<-c("Cyanide","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
+metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
              "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
              "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
              "Hardness, carbonate","Hardness, non-carbonate","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")
@@ -385,11 +385,42 @@ server <- function(input, output) {
      rpa<-unit_conv(rpa,names,"mg/l","ug/l")
      rpa<-unit_conv(rpa,names,"ng/l","ug/l")
      
+     #add T, D, or I to CAS# for certain parameters (mostly metals, used RPA workbook to identify parameters) 
+     #so that the RPA workbooks will recognize them
+     
+     #dissolved
+     rpa$CASNumber<-
+       ifelse(rpa$Char_Name %in% c("Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
+                                   "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
+                                   "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)") &
+              rpa$Sample_Fraction %in% "Dissolved",
+              paste0(rpa$CASNumber,"D"),
+              rpa$CASNumber)
+     #total
+     rpa$CASNumber<-
+       ifelse(rpa$Char_Name %in% c("Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
+                                   "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
+                                   "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)") &
+              (rpa$Sample_Fraction %in% "Total Recoverable"|
+              rpa$Sample_Fraction %in% "Total"),
+              paste0(rpa$CASNumber,"T"),
+              rpa$CASNumber)
+     
+     #free cyanide, have to add CAS # to match with RPA spreadsheet since AWQMS free cyanide parameter doesn't have CAS
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Cyanides amenable to chlorination (HCN & CN)"),
+                           paste0("57125F"),
+                           rpa$CASNumber)
+     
+     #inorganic arsenic, have to add CAS # to match with RPA spreadsheet since AWQMS inorganic arsenic parameter doesn't have CAS
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Arsenic, Inorganic"),
+                           paste0("7440382I"),
+                           rpa$CASNumber)
+     
      #combine Char_Name and Sample_Fraction for just metals
      rpa$Char_Name<-
        ifelse(rpa$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
                                          "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
-                                         "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)"),
+                                         "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)"),
               paste0(rpa$Char_Name,", ",rpa$Sample_Fraction),
               rpa$Char_Name)
      
