@@ -13,7 +13,7 @@ library(xlsx)
 library(dplyr)
 library(xlsxjars)
 library(mapview)
-#library(leaflet.extras)
+library(leaflet.extras)
 #library(mapedit)
 #library(sf)
 library(shinybusy)
@@ -39,7 +39,7 @@ source("Ammonia_RPA_Transform.R")
 #make it so only the RPA groupings are shown in the drop down
 
 chars <- c("All RPA","All Toxics","Copper BLM","ph RPA","Ammonia RPA","DO RPA","Pesticides and PCB RPA","Base Neutral RPA", "Acid Extractable RPA",
-           "VOC RPA","Metals RPA")
+           "VOC RPA","Metals RPA","None")
 
 #create variables with specific characteristics for the different groups
 
@@ -279,7 +279,8 @@ server <- function(input, output) {
                  "Acid Extractable RPA"=aext,
                  "VOC RPA"=vocrpa,
                  "Metals RPA"=metalsrpa,
-                 "All Toxics"=tox)
+                 "All Toxics"=tox,
+                 "None"=character(0)) #none is an empty character string so we can just pull one off parameters
    one<-c(input$oneoff)
    rchar<-c(gch,one)
    
@@ -515,6 +516,7 @@ server <- function(input, output) {
      
      #Create Cell Block and populate the rows with the parameters
      cells<-CellBlock(sheet,6,1,11,1)
+     
      CB.setRowData(cells,startdt,1)
      CB.setRowData(cells,enddt,2)
      CB.setRowData(cells,stations,3)
@@ -545,7 +547,7 @@ server <- function(input, output) {
    
 
 # Download button- only works in Chrome
-# gives an excel workbook with multiple sheets, the first is the serach parameters (needs some work), the second is the map,
+# gives an excel workbook with multiple sheets, the first is the serach parameters, the second is the map,
 # the rest are data in various formats
 #set to give NAs as blank cells
 output$downloadData <- downloadHandler(
