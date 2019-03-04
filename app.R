@@ -223,6 +223,7 @@ ui <- fluidPage(
      # Setup main panel
        mainPanel(
         h1("RPA Data Builder"),
+        verbatimTextOutput("contwar"),
         # Add line
         tags$hr(),
         #Add break
@@ -244,7 +245,8 @@ ui <- fluidPage(
                            )
                  ),
         # Aliana added a data table
-        tabPanel("Table",dataTableOutput("table")),
+        tabPanel("Table",
+                 dataTableOutput("table")),
         #add leaflet map
         tabPanel("Map",leafletOutput("locs"))
         )
@@ -262,7 +264,7 @@ server <- function(input, output) {
    #all other variables are reactive 'as is' except for reject button
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
 
-   data<-eventReactive(input$goButton,{
+   orig<-eventReactive(input$goButton,{
      
    rstdt<-toString(sprintf("%s",input$startd))
    rendd<-toString(sprintf("%s",input$endd))
@@ -280,13 +282,14 @@ server <- function(input, output) {
                  "VOC RPA"=vocrpa,
                  "Metals RPA"=metalsrpa,
                  "All Toxics"=tox,
-                 "None"=character(0)) #none is an empty character string so we can just pull one off parameters
+                 "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
    one<-c(input$oneoff)
    rchar<-c(gch,one)
    
    #actual query for data
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
                   char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
+   
    
    #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
    #in data() and add a column that has all characteristic names for each monitoring location....
@@ -301,6 +304,17 @@ server <- function(input, output) {
    mer<-merge(dat,grp, by="MLocID")
    
    mer
+   })
+   #if summary statistics are included, create flag showing that continous data is available and remove all data that isn't 7 day avg
+   output$contwar<-renderText({
+     warn<-unique(if(!is.na(orig()$Time_Basis)) {paste("Continous data available upon request")})
+     warn
+   })
+   
+   #remove summary stats that are not 7 day avg
+   data<-eventReactive(input$goButton,{
+     dat<-subset(orig(),is.na(orig()$Time_Basis)|orig()$Time_Basis %in% "7DADMean")
+     dat
    })
    
    #take data, make a subtable for VIEWING in the shiny app so it only shows desired columns from the AWQMS pull in desired order
@@ -472,6 +486,9 @@ server <- function(input, output) {
                       "Volatile Organic Carbon RPA: ",toString(vocrpa), "\n\n",
                       "Metals and Hardness RPA: ",toString(metalsrpa))
      
+     #add continuous data availability warning
+     warn<-unique(if(!is.na(orig()$Time_Basis)) {paste("Continous data available upon request")})
+     
      #create workbook and sheet
      wb<-createWorkbook()
      sheet<-createSheet(wb,sheetName="Search Criteria")
@@ -514,8 +531,13 @@ server <- function(input, output) {
                    title=paste0("Date of query, ",Sys.Date()),
                    titleStyle = SUB_TITLE_STYLE)
      
+     #add sub title for warning
+     if(length(warn)>0) {xlsx.addTitle(sheet,rowIndex=5,
+                        title=warn,
+                        titleStyle=SUB_TITLE_STYLE)}
+     
      #Create Cell Block and populate the rows with the parameters
-     cells<-CellBlock(sheet,6,1,11,1)
+     cells<-CellBlock(sheet,7,1,12,1)
      
      CB.setRowData(cells,startdt,1)
      CB.setRowData(cells,enddt,2)
