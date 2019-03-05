@@ -544,10 +544,11 @@ server <- function(input, output) {
      CB.setRowData(cells,stations,3)
      CB.setRowData(cells,monty,4)
      CB.setRowData(cells,charc,5)
-     CB.setRowData(cells,huc8s,6)
-     CB.setRowData(cells,organiz,7)
-     CB.setRowData(cells,rejected,8)
-     CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
+     CB.setRowData(cells,onof,6)
+     CB.setRowData(cells,huc8s,7)
+     CB.setRowData(cells,organiz,8)
+     CB.setRowData(cells,rejected,9)
+     CB.setRowData(cells,allchar,11,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
      setColumnWidth(sheet,1,220)
      
      #add the leaflet map as a sheet in the download excel
@@ -581,11 +582,11 @@ output$downloadData <- downloadHandler(
     #sheet with data
     write.xlsx(dsub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
     #sheet with just RPA format
-    write.xlsx(rpa(),file,sheetName="RPA_Data_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
+    #lwrite.xlsx(rpa(),file,sheetName="RPA_Data_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
     #sheet for copper BLM data
-    write.xlsx(copper(),file,sheetName="Copper_BLM_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
+    #write.xlsx(copper(),file,sheetName="Copper_BLM_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
     #sheet for Ammonia RPA
-    if(length(amm()>0)) {write.xlsx(amm(),file,sheetName="Ammonia_RPA_Format",row.names=FALSE,showNA=FALSE,append=TRUE)}
+    #if(length(amm()>0)) {write.xlsx(amm(),file,sheetName="Ammonia_RPA_Format",row.names=FALSE,showNA=FALSE,append=TRUE)}
     })
 
 }

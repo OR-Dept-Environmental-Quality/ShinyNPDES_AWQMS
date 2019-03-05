@@ -50,7 +50,7 @@ NPDES_AWQMS_Qry<-function
     query=paste0(query,"\n AND MonLocType in ('BEACH Program Site-Ocean','BEACH Program Site-River/Stream',
                'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
                'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
-               'River/Stream Perennial')")
+               'River/Stream Perennial','Facility Public Water Supply (PWS)')")
     }
   query=paste0(query,"\n AND MLocID <> '10000-ORDEQ'\n                   \n AND activity_type NOT LIKE 'Quality Control%'")
   
