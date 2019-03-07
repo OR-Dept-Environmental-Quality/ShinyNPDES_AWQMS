@@ -537,20 +537,20 @@ server <- function(input, output) {
        setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
        
        #Map
-    #   addWorksheet(wb,"Map") 
+       addWorksheet(wb,"Map") 
         
        #create map with limited labels
-      # map<-leaflet(data()) %>%
-      #   addTiles()%>%
-      #   addMarkers(lng=~Long_DD,
-       #             lat=~Lat_DD,
-       ##             label=~MLocID,
-       #             labelOptions=labelOptions(noHide=T))
-       #
-       #save as png file
-     #  mapshot(map,file="map.png")
+       map<-leaflet(data()) %>%
+         addTiles()%>%
+         addMarkers(lng=~Long_DD,
+                    lat=~Lat_DD,
+                    label=~MLocID,
+                    labelOptions=labelOptions(noHide=T))
        
-     #  insertImage(wb,"Map","map.png",width=10,height=6)
+       #save as png file
+       mapshot(map,file="map.png")
+       
+       insertImage(wb,"Map","map.png",width=10,height=6)
        
        #Data sheets, 
        addWorksheet(wb,"Data")
