@@ -9,7 +9,7 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 library(leaflet)
-library(xlsx)
+#library(xlsx)
 library(dplyr)
 library(xlsxjars)
 library(mapview)
@@ -17,6 +17,7 @@ library(leaflet.extras)
 #library(mapedit)
 #library(sf)
 library(shinybusy)
+library(openxlsx)
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -491,78 +492,75 @@ server <- function(input, output) {
      
      #create workbook and sheet
      wb<-createWorkbook()
-     sheet<-createSheet(wb,sheetName="Search Criteria")
-     
-     #add title function 
-     ##code borrowed from "http://www.sthda.com/english/wiki/r-xlsx-package-a-quick-start-guide-to-manipulate-excel-files-in-r"
-     #add title function
-     #++++++++++++++++++++++++
-     # Helper function to add titles
-     #++++++++++++++++++++++++
-     # - sheet : sheet object to contain the title
-     # - rowIndex : numeric value indicating the row to 
-     #contain the title
-     # - title : the text to use as title
-     # - titleStyle : style object to use for title
-     xlsx.addTitle<-function(sheet, rowIndex, title, titleStyle){
-       rows <-createRow(sheet,rowIndex=rowIndex)
-       sheetTitle <-createCell(rows, colIndex=1)
-       setCellValue(sheetTitle[[1,1]], title)
-       setCellStyle(sheetTitle[[1,1]], titleStyle)
-     }
-     TITLE_STYLE <- CellStyle(wb)+ Font(wb,  heightInPoints=16, 
-                                        color="blue", isBold=TRUE, underline=1)
-     SUB_TITLE_STYLE <- CellStyle(wb) + 
-       Font(wb,  heightInPoints=14, 
-            isItalic=TRUE, isBold=FALSE)
-     # Add title
-     xlsx.addTitle(sheet, rowIndex=1, title="RPA Data Search Criteria",
-                   titleStyle = TITLE_STYLE)
-     # Add sub title
-     xlsx.addTitle(sheet, rowIndex=2, 
-                   title=paste0(input$permittee),
-                   titleStyle = SUB_TITLE_STYLE)
-     # Add sub title
-     xlsx.addTitle(sheet, rowIndex=3, 
-                   title=paste0("Permit # ",input$permit_num),
-                   titleStyle = SUB_TITLE_STYLE)
-     # Add sub title
-     xlsx.addTitle(sheet, rowIndex=4, 
-                   title=paste0("Date of query, ",Sys.Date()),
-                   titleStyle = SUB_TITLE_STYLE)
-     
-     #add sub title for warning
-     if(length(warn)>0) {xlsx.addTitle(sheet,rowIndex=5,
-                        title=warn,
-                        titleStyle=SUB_TITLE_STYLE)}
-     
-     #Create Cell Block and populate the rows with the parameters
-     cells<-CellBlock(sheet,7,1,12,1)
-     
-     CB.setRowData(cells,startdt,1)
-     CB.setRowData(cells,enddt,2)
-     CB.setRowData(cells,stations,3)
-     CB.setRowData(cells,monty,4)
-     CB.setRowData(cells,charc,5)
-     CB.setRowData(cells,onof,6)
-     CB.setRowData(cells,huc8s,7)
-     CB.setRowData(cells,organiz,8)
-     CB.setRowData(cells,rejected,9)
-     CB.setRowData(cells,allchar,11,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
-     setColumnWidth(sheet,1,220)
-     
-     #add the leaflet map as a sheet in the download excel
-     map<-leaflet(data()) %>%
-                  addTiles()%>%
-                  addMarkers(lng=~Long_DD,
-                             lat=~Lat_DD,
-                             label=~MLocID,
-                             labelOptions=labelOptions(noHide=T))
-     
-     mapshot(map,file="map.png")
-     
-     sheet2<-createSheet(wb,sheetName = "Map")
-     addPicture("map.png",sheet2)
+     #add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is availabe
+       
+     #Search Criteria
+     addWorksheet(wb,"Search Criteria")
+       
+       #Create title styles
+       mainTitle<-createStyle(fontSize=16,fontColour="blue",textDecoration=c("bold","underline"))
+       subTitle<-createStyle(fontSize=14,textDecoration="italic")
+       wrap<-createStyle(wrapText=TRUE)
+       
+       # Add title
+       title<-"RPA Data Search Criteria"
+       #add title to sheet
+       addStyle(wb,sheet="Search Criteria",style=mainTitle,rows=1,cols=1)
+       writeData(wb,sheet="Search Criteria",x=title,startRow=1,startCol=1)
+       
+       #add subtitles
+       addStyle(wb,sheet="Search Criteria",style=subTitle,rows=2:4,cols=1)
+       writeData(wb,sheet="Search Criteria",x=input$permittee,startRow=2,startCol=1)
+       
+       permit<-paste0("Permit # ",input$permit_num)
+       writeData(wb,sheet="Search Criteria",x=permit,startRow=2,startCol=1)
+       
+       querydate<-paste0("Date of query, ",Sys.Date())
+       writeData(wb,sheet="Search Criteria",x=querydate,startRow=3,startCol=1)
+       
+       #add sub title for continuous data warning
+       if(length(warn)>0) {writeData(wb,sheet="Search Criteria",x=warn,startRow=4,startCol=1)}
+       
+       #populate rows with parameters
+       writeData(wb,sheet="Search Criteria",x=startdt,startCol=1,startRow=6)
+       writeData(wb,sheet="Search Criteria",x=enddt,startCol=1,startRow=7)
+       writeData(wb,sheet="Search Criteria",x=stations,startCol=1,startRow=8)
+       writeData(wb,sheet="Search Criteria",x=monty,startCol=1,startRow=9)
+       writeData(wb,sheet="Search Criteria",x=charc,startCol=1,startRow=10)
+       writeData(wb,sheet="Search Criteria",x=onof,startCol=1,startRow=11)
+       writeData(wb,sheet="Search Criteria",x=huc8s,startCol=1,startRow=12)
+       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=13)
+       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=14)
+       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=15)
+       
+       addStyle(wb,sheet="Search Criteria",style=wrap,rows=15,cols=1)
+       setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
+       
+       #Map
+    #   addWorksheet(wb,"Map") 
+        
+       #create map with limited labels
+      # map<-leaflet(data()) %>%
+      #   addTiles()%>%
+      #   addMarkers(lng=~Long_DD,
+       #             lat=~Lat_DD,
+       ##             label=~MLocID,
+       #             labelOptions=labelOptions(noHide=T))
+       #
+       #save as png file
+     #  mapshot(map,file="map.png")
+       
+     #  insertImage(wb,"Map","map.png",width=10,height=6)
+       
+       #Data sheets, 
+       addWorksheet(wb,"Data")
+            writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
+       if (nrow(rpa()>0)) {addWorksheet(wb,"RPA_Data_Format")
+                           writeDataTable(wb,"RPA_Data_Format",x=rpa(),tableStyle="none")}
+       if (nrow(copper()>0)) {addWorksheet(wb,"CuBLM_Data_Format")
+                              writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
+       if (nrow(amm()>0)) {addWorksheet(wb,"Ammonia_RPA_Format")
+                           writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
        
      wb
    })
@@ -579,14 +577,6 @@ output$downloadData <- downloadHandler(
   content = function(file) {
     #sheet with query parameters
     saveWorkbook(param(),file)
-    #sheet with data
-    write.xlsx(dsub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
-    #sheet with just RPA format
-    #lwrite.xlsx(rpa(),file,sheetName="RPA_Data_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
-    #sheet for copper BLM data
-    #write.xlsx(copper(),file,sheetName="Copper_BLM_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
-    #sheet for Ammonia RPA
-    #if(length(amm()>0)) {write.xlsx(amm(),file,sheetName="Ammonia_RPA_Format",row.names=FALSE,showNA=FALSE,append=TRUE)}
     })
 
 }
