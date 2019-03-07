@@ -555,11 +555,11 @@ server <- function(input, output) {
        #Data sheets, 
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
-       if (nrow(rpa()>0)) {addWorksheet(wb,"RPA_Data_Format")
+       if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
                            writeDataTable(wb,"RPA_Data_Format",x=rpa(),tableStyle="none")}
-       if (nrow(copper()>0)) {addWorksheet(wb,"CuBLM_Data_Format")
+       if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
-       if (nrow(amm()>0)) {addWorksheet(wb,"Ammonia_RPA_Format")
+       if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
                            writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
        
      wb
