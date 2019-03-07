@@ -9,14 +9,15 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 library(leaflet)
-library(xlsx)
+#library(xlsx)
 library(dplyr)
 library(xlsxjars)
 library(mapview)
-#library(leaflet.extras)
+library(leaflet.extras)
 #library(mapedit)
 #library(sf)
 library(shinybusy)
+library(openxlsx)
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -39,7 +40,7 @@ source("Ammonia_RPA_Transform.R")
 #make it so only the RPA groupings are shown in the drop down
 
 chars <- c("All RPA","All Toxics","Copper BLM","ph RPA","Ammonia RPA","DO RPA","Pesticides and PCB RPA","Base Neutral RPA", "Acid Extractable RPA",
-           "VOC RPA","Metals RPA")
+           "VOC RPA","Metals RPA","None")
 
 #create variables with specific characteristics for the different groups
 
@@ -223,6 +224,7 @@ ui <- fluidPage(
      # Setup main panel
        mainPanel(
         h1("RPA Data Builder"),
+        verbatimTextOutput("contwar"),
         # Add line
         tags$hr(),
         #Add break
@@ -244,7 +246,8 @@ ui <- fluidPage(
                            )
                  ),
         # Aliana added a data table
-        tabPanel("Table",dataTableOutput("table")),
+        tabPanel("Table",
+                 dataTableOutput("table")),
         #add leaflet map
         tabPanel("Map",leafletOutput("locs"))
         )
@@ -262,7 +265,7 @@ server <- function(input, output) {
    #all other variables are reactive 'as is' except for reject button
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
 
-   data<-eventReactive(input$goButton,{
+   orig<-eventReactive(input$goButton,{
      
    rstdt<-toString(sprintf("%s",input$startd))
    rendd<-toString(sprintf("%s",input$endd))
@@ -279,13 +282,15 @@ server <- function(input, output) {
                  "Acid Extractable RPA"=aext,
                  "VOC RPA"=vocrpa,
                  "Metals RPA"=metalsrpa,
-                 "All Toxics"=tox)
+                 "All Toxics"=tox,
+                 "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
    one<-c(input$oneoff)
    rchar<-c(gch,one)
    
    #actual query for data
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
                   char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
+   
    
    #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
    #in data() and add a column that has all characteristic names for each monitoring location....
@@ -300,6 +305,17 @@ server <- function(input, output) {
    mer<-merge(dat,grp, by="MLocID")
    
    mer
+   })
+   #if summary statistics are included, create flag showing that continous data is available and remove all data that isn't 7 day avg
+   output$contwar<-renderText({
+     warn<-unique(if(!is.na(orig()$Time_Basis)) {paste("Continous data available upon request")})
+     warn
+   })
+   
+   #remove summary stats that are not 7 day avg
+   data<-eventReactive(input$goButton,{
+     dat<-subset(orig(),is.na(orig()$Time_Basis)|orig()$Time_Basis %in% "7DADMean")
+     dat
    })
    
    #take data, make a subtable for VIEWING in the shiny app so it only shows desired columns from the AWQMS pull in desired order
@@ -471,73 +487,80 @@ server <- function(input, output) {
                       "Volatile Organic Carbon RPA: ",toString(vocrpa), "\n\n",
                       "Metals and Hardness RPA: ",toString(metalsrpa))
      
+     #add continuous data availability warning
+     warn<-unique(if(!is.na(orig()$Time_Basis)) {paste("Continous data available upon request")})
+     
      #create workbook and sheet
      wb<-createWorkbook()
-     sheet<-createSheet(wb,sheetName="Search Criteria")
-     
-     #add title function 
-     ##code borrowed from "http://www.sthda.com/english/wiki/r-xlsx-package-a-quick-start-guide-to-manipulate-excel-files-in-r"
-     #add title function
-     #++++++++++++++++++++++++
-     # Helper function to add titles
-     #++++++++++++++++++++++++
-     # - sheet : sheet object to contain the title
-     # - rowIndex : numeric value indicating the row to 
-     #contain the title
-     # - title : the text to use as title
-     # - titleStyle : style object to use for title
-     xlsx.addTitle<-function(sheet, rowIndex, title, titleStyle){
-       rows <-createRow(sheet,rowIndex=rowIndex)
-       sheetTitle <-createCell(rows, colIndex=1)
-       setCellValue(sheetTitle[[1,1]], title)
-       setCellStyle(sheetTitle[[1,1]], titleStyle)
-     }
-     TITLE_STYLE <- CellStyle(wb)+ Font(wb,  heightInPoints=16, 
-                                        color="blue", isBold=TRUE, underline=1)
-     SUB_TITLE_STYLE <- CellStyle(wb) + 
-       Font(wb,  heightInPoints=14, 
-            isItalic=TRUE, isBold=FALSE)
-     # Add title
-     xlsx.addTitle(sheet, rowIndex=1, title="RPA Data Search Criteria",
-                   titleStyle = TITLE_STYLE)
-     # Add sub title
-     xlsx.addTitle(sheet, rowIndex=2, 
-                   title=paste0(input$permittee),
-                   titleStyle = SUB_TITLE_STYLE)
-     # Add sub title
-     xlsx.addTitle(sheet, rowIndex=3, 
-                   title=paste0("Permit # ",input$permit_num),
-                   titleStyle = SUB_TITLE_STYLE)
-     # Add sub title
-     xlsx.addTitle(sheet, rowIndex=4, 
-                   title=paste0("Date of query, ",Sys.Date()),
-                   titleStyle = SUB_TITLE_STYLE)
-     
-     #Create Cell Block and populate the rows with the parameters
-     cells<-CellBlock(sheet,6,1,11,1)
-     CB.setRowData(cells,startdt,1)
-     CB.setRowData(cells,enddt,2)
-     CB.setRowData(cells,stations,3)
-     CB.setRowData(cells,monty,4)
-     CB.setRowData(cells,charc,5)
-     CB.setRowData(cells,huc8s,6)
-     CB.setRowData(cells,organiz,7)
-     CB.setRowData(cells,rejected,8)
-     CB.setRowData(cells,allchar,10,rowStyle = CellStyle(wb,alignment=Alignment(wrapText=TRUE)))
-     setColumnWidth(sheet,1,220)
-     
-     #add the leaflet map as a sheet in the download excel
-     map<-leaflet(data()) %>%
-                  addTiles()%>%
-                  addMarkers(lng=~Long_DD,
-                             lat=~Lat_DD,
-                             label=~MLocID,
-                             labelOptions=labelOptions(noHide=T))
-     
-     mapshot(map,file="map.png")
-     
-     sheet2<-createSheet(wb,sheetName = "Map")
-     addPicture("map.png",sheet2)
+     #add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is availabe
+       
+     #Search Criteria
+     addWorksheet(wb,"Search Criteria")
+       
+       #Create title styles
+       mainTitle<-createStyle(fontSize=16,fontColour="blue",textDecoration=c("bold","underline"))
+       subTitle<-createStyle(fontSize=14,textDecoration="italic")
+       wrap<-createStyle(wrapText=TRUE)
+       
+       # Add title
+       title<-"RPA Data Search Criteria"
+       #add title to sheet
+       addStyle(wb,sheet="Search Criteria",style=mainTitle,rows=1,cols=1)
+       writeData(wb,sheet="Search Criteria",x=title,startRow=1,startCol=1)
+       
+       #add subtitles
+       addStyle(wb,sheet="Search Criteria",style=subTitle,rows=2:4,cols=1)
+       writeData(wb,sheet="Search Criteria",x=input$permittee,startRow=2,startCol=1)
+       
+       permit<-paste0("Permit # ",input$permit_num)
+       writeData(wb,sheet="Search Criteria",x=permit,startRow=2,startCol=1)
+       
+       querydate<-paste0("Date of query, ",Sys.Date())
+       writeData(wb,sheet="Search Criteria",x=querydate,startRow=3,startCol=1)
+       
+       #add sub title for continuous data warning
+       if(length(warn)>0) {writeData(wb,sheet="Search Criteria",x=warn,startRow=4,startCol=1)}
+       
+       #populate rows with parameters
+       writeData(wb,sheet="Search Criteria",x=startdt,startCol=1,startRow=6)
+       writeData(wb,sheet="Search Criteria",x=enddt,startCol=1,startRow=7)
+       writeData(wb,sheet="Search Criteria",x=stations,startCol=1,startRow=8)
+       writeData(wb,sheet="Search Criteria",x=monty,startCol=1,startRow=9)
+       writeData(wb,sheet="Search Criteria",x=charc,startCol=1,startRow=10)
+       writeData(wb,sheet="Search Criteria",x=onof,startCol=1,startRow=11)
+       writeData(wb,sheet="Search Criteria",x=huc8s,startCol=1,startRow=12)
+       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=13)
+       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=14)
+       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=15)
+       
+       addStyle(wb,sheet="Search Criteria",style=wrap,rows=15,cols=1)
+       setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
+       
+       #Map
+       addWorksheet(wb,"Map") 
+        
+       #create map with limited labels
+       map<-leaflet(data()) %>%
+         addTiles()%>%
+         addMarkers(lng=~Long_DD,
+                    lat=~Lat_DD,
+                    label=~MLocID,
+                    labelOptions=labelOptions(noHide=T))
+       
+       #save as png file
+       mapshot(map,file="map.png")
+       
+       insertImage(wb,"Map","map.png",width=10,height=6)
+       
+       #Data sheets, 
+       addWorksheet(wb,"Data")
+            writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
+       if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
+                           writeDataTable(wb,"RPA_Data_Format",x=rpa(),tableStyle="none")}
+       if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
+                              writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
+       if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
+                           writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
        
      wb
    })
@@ -545,7 +568,7 @@ server <- function(input, output) {
    
 
 # Download button- only works in Chrome
-# gives an excel workbook with multiple sheets, the first is the serach parameters (needs some work), the second is the map,
+# gives an excel workbook with multiple sheets, the first is the serach parameters, the second is the map,
 # the rest are data in various formats
 #set to give NAs as blank cells
 output$downloadData <- downloadHandler(
@@ -554,14 +577,6 @@ output$downloadData <- downloadHandler(
   content = function(file) {
     #sheet with query parameters
     saveWorkbook(param(),file)
-    #sheet with data
-    write.xlsx(dsub(), file,sheetName="Data",row.names = FALSE,showNA=FALSE,append=TRUE)
-    #sheet with just RPA format
-    write.xlsx(rpa(),file,sheetName="RPA_Data_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
-    #sheet for copper BLM data
-    write.xlsx(copper(),file,sheetName="Copper_BLM_Format",row.names=FALSE,showNA=FALSE,append=TRUE)
-    #sheet for Ammonia RPA
-    if(length(amm()>0)) {write.xlsx(amm(),file,sheetName="Ammonia_RPA_Format",row.names=FALSE,showNA=FALSE,append=TRUE)}
     })
 
 }
