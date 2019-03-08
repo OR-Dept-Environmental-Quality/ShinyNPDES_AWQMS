@@ -9,7 +9,6 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 library(leaflet)
-#library(xlsx)
 library(dplyr)
 library(xlsxjars)
 library(mapview)
@@ -464,6 +463,7 @@ server <- function(input, output) {
    
 
    #create list of the parameters in query, get it into a formatted excel to export so we have record of query
+   #add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is available
    param<-eventReactive(input$goButton, {
      
      #create strings for the input parameters
@@ -492,7 +492,6 @@ server <- function(input, output) {
      
      #create workbook and sheet
      wb<-createWorkbook()
-     #add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is availabe
        
      #Search Criteria
      addWorksheet(wb,"Search Criteria")
@@ -510,30 +509,30 @@ server <- function(input, output) {
        
        #add subtitles
        addStyle(wb,sheet="Search Criteria",style=subTitle,rows=2:4,cols=1)
-       writeData(wb,sheet="Search Criteria",x=input$permittee,startRow=2,startCol=1)
+       writeData(wb,sheet="Search Criteria",x=paste0(input$permittee),startRow=2,startCol=1)
        
        permit<-paste0("Permit # ",input$permit_num)
-       writeData(wb,sheet="Search Criteria",x=permit,startRow=2,startCol=1)
+       writeData(wb,sheet="Search Criteria",x=permit,startRow=3,startCol=1)
        
        querydate<-paste0("Date of query, ",Sys.Date())
-       writeData(wb,sheet="Search Criteria",x=querydate,startRow=3,startCol=1)
+       writeData(wb,sheet="Search Criteria",x=querydate,startRow=4,startCol=1)
        
        #add sub title for continuous data warning
-       if(length(warn)>0) {writeData(wb,sheet="Search Criteria",x=warn,startRow=4,startCol=1)}
+       if(length(warn)>0) {writeData(wb,sheet="Search Criteria",x=warn,startRow=5,startCol=1)}
        
        #populate rows with parameters
-       writeData(wb,sheet="Search Criteria",x=startdt,startCol=1,startRow=6)
-       writeData(wb,sheet="Search Criteria",x=enddt,startCol=1,startRow=7)
-       writeData(wb,sheet="Search Criteria",x=stations,startCol=1,startRow=8)
-       writeData(wb,sheet="Search Criteria",x=monty,startCol=1,startRow=9)
-       writeData(wb,sheet="Search Criteria",x=charc,startCol=1,startRow=10)
-       writeData(wb,sheet="Search Criteria",x=onof,startCol=1,startRow=11)
-       writeData(wb,sheet="Search Criteria",x=huc8s,startCol=1,startRow=12)
-       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=13)
-       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=14)
-       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=15)
+       writeData(wb,sheet="Search Criteria",x=startdt,startCol=1,startRow=7)
+       writeData(wb,sheet="Search Criteria",x=enddt,startCol=1,startRow=8)
+       writeData(wb,sheet="Search Criteria",x=stations,startCol=1,startRow=9)
+       writeData(wb,sheet="Search Criteria",x=monty,startCol=1,startRow=10)
+       writeData(wb,sheet="Search Criteria",x=charc,startCol=1,startRow=11)
+       writeData(wb,sheet="Search Criteria",x=onof,startCol=1,startRow=12)
+       writeData(wb,sheet="Search Criteria",x=huc8s,startCol=1,startRow=13)
+       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=14)
+       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=15)
+       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=16)
        
-       addStyle(wb,sheet="Search Criteria",style=wrap,rows=15,cols=1)
+       addStyle(wb,sheet="Search Criteria",style=wrap,rows=16,cols=1)
        setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
        
        #Map
@@ -547,10 +546,10 @@ server <- function(input, output) {
                     label=~MLocID,
                     labelOptions=labelOptions(noHide=T))
        
-       #save as png file
-       mapshot(map,file="map.png")
+       #save as jpeg file (pdf isn't able to be displayed)
+       mapshot(map,file="map.jpeg")
        
-       insertImage(wb,"Map","map.png",width=10,height=6)
+       insertImage(wb,"Map","map.jpeg",width=10,height=7)
        
        #Data sheets, 
        addWorksheet(wb,"Data")
