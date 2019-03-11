@@ -218,7 +218,12 @@ ui <- fluidPage(
        actionButton("goButton","Run Query"),
        
        #add a download button so we can download query results
-       downloadButton('downloadData', 'Download Data')
+       downloadButton('downloadData', 'Download Data'),
+       
+       #add button to make download of map optional
+       checkboxInput("NoMap",
+                     label="Add map to data download?",
+                     value= FALSE)
         ),
 
 
@@ -389,6 +394,7 @@ server <- function(input, output) {
      rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)",
                                            "Dissolved oxygen saturation","Salinity","Organic carbon")))
     
+     if (nrow(rpa)!=0){
        #combine method_code and method_Context columns
      rpa$Method_Code<-paste0(rpa$Method_Code," (",rpa$Method_Context,")")
 
@@ -440,7 +446,7 @@ server <- function(input, output) {
     #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
      rpa$Result<-ifelse(rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
      
-    #only take select rows, change order so that it is more in line with RPA
+    #only take certain rows, change order so that it is more in line with RPA
      rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,MLocID,MonLocType,Result_Comment))
@@ -448,7 +454,7 @@ server <- function(input, output) {
      
      #need to remove dashes from CASNumber row
      rpa$CASNumber<-gsub("-","",rpa$CASNumber)
-     
+     }
      return(rpa)
      
    })
@@ -536,7 +542,10 @@ server <- function(input, output) {
        setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
        
        #Map
-       addWorksheet(wb,"Map") 
+       #conditional on whether map button is checked
+       if (input$NoMap==TRUE) 
+       
+       {addWorksheet(wb,"Map") 
         
        #create map with limited labels
        map<-leaflet(data()) %>%
@@ -550,6 +559,7 @@ server <- function(input, output) {
        mapshot(map,file="map.jpeg")
        
        insertImage(wb,"Map","map.jpeg",width=10,height=7)
+       }
        
        #Data sheets
        addWorksheet(wb,"Counts")
