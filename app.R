@@ -30,6 +30,8 @@ options(scipen=999)
 source("NPDES_AWQMSQuery.R")
 #contains function to transform data into proper units and format to run through Ammonia RPA
 source("Ammonia_RPA_Transform.R")
+#function to combine characteristic name and sample fraction for metals
+source("NameandFraction.R")
 
 
 # Query out the valid values ---------------------------------------------
@@ -381,7 +383,7 @@ server <- function(input, output) {
    })
    
    
-   #take data, make subtable just for RPA data
+   #take data, make subtable just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
      #remove temperature, DO, pH and other non-toxics RPA characteristics
      rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)",
@@ -432,13 +434,11 @@ server <- function(input, output) {
                            rpa$CASNumber)
      
      #combine Char_Name and Sample_Fraction for just metals
-     rpa$Char_Name<-
-       ifelse(rpa$Char_Name %in% c("Calcium","Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
-                                         "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
-                                         "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)"),
-              paste0(rpa$Char_Name,", ",rpa$Sample_Fraction),
-              rpa$Char_Name)
-     
+     rpa<-namefrac(rpa)
+    
+    #need to change data so that anything less than MDL is reported as ND 
+    #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
+     rpa$Result<-ifelse(rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
      
     #only take select rows, change order so that it is more in line with RPA
      rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
@@ -546,12 +546,17 @@ server <- function(input, output) {
                     label=~MLocID,
                     labelOptions=labelOptions(noHide=T))
        
-       #save as jpeg file (pdf isn't able to be displayed)
+       #save as jpeg file (pdf isn't able to be displayed, png has much larger file size)
        mapshot(map,file="map.jpeg")
        
        insertImage(wb,"Map","map.jpeg",width=10,height=7)
        
-       #Data sheets, 
+       #Data sheets
+       addWorksheet(wb,"Counts")
+       #create counts of each parameter (combine metals name and fraction first)
+            cnt<-namefrac(dsub())
+            counter<-count(cnt,cnt$Char_Name,name="Data Count")
+            writeDataTable(wb,"Counts",x=counter,tableStyle="none")
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
        if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
