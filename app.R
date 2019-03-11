@@ -330,9 +330,9 @@ server <- function(input, output) {
    
    #take data, make a subtable for VIEWING in the shiny app so it only shows desired columns from the AWQMS pull in desired order
    tsub<-eventReactive(input$goButton,{
-     tsub<-select(data(),Org_Name,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
+     tsub<-select(data(),OrganizationID,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
                SampleSubmedia,Activity_Type,Statistical_Base,Char_Name,Char_Speciation,
-               Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,
+               Sample_Fraction,CASNumber,Result,Result_Unit,Method_Code,Method_Context,
                Activity_Comment,Result_Comment,Result_status,Result_Type)
    tsub
    })
