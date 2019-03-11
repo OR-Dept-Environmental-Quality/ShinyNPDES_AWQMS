@@ -244,11 +244,15 @@ ui <- fluidPage(
                            h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
                            h5("Peruse the 'Table' and 'Map' tabs to view results and locations"),
                            h5("Click 'Download Data' to download results"),
+                           h5("Warning: after running the query, if you change your mind about whether to include the map, 
+                              you must select the box to add the map and then re run the query to ensure that the map will be 
+                              part of the download"),
                            tags$br(),
                            h5("Warning: running query with all characteristics and a large timeframe (1+ year) can overload the server.
                               If you want to search for all characteristics, it is recommended that you run the query with a short timeframe
                               first (~6 months), then use the map to locate several stations of interest and refine query accordingly.
-                              Alternatively, you may also refine by HUC8. However, refining search by HUC8 may not include all stations.")
+                              Alternatively, you may also refine by HUC8. However, refining search by HUC8 may not include all stations near 
+                              the coast.")
                            )
                  ),
         # Aliana added a data table
