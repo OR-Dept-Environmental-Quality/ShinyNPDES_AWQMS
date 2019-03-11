@@ -448,7 +448,7 @@ server <- function(input, output) {
     
     #need to change data so that anything less than MDL is reported as ND 
     #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
-     rpa$Result<-ifelse(rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
+     rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
      
     #only take certain rows, change order so that it is more in line with RPA
      rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
