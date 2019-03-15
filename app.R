@@ -213,6 +213,10 @@ ui <- fluidPage(
        checkboxInput("Reject",
                      label = "Keep Rejected data",
                      value = FALSE),
+       #keep summary stats button
+       checkboxInput("Summary",
+                     label="Keep Continuous Data Summary Statistics (other than 7 day avg)?",
+                     value=FALSE),
        
        #add action button, so query doesn't run until button is clicked
        actionButton("goButton","Run Query"),
@@ -318,13 +322,13 @@ server <- function(input, output) {
    })
    #if summary statistics are included, create flag showing that continous data is available and remove all data that isn't 7 day avg
    output$contwar<-renderText({
-     warn<-unique(if(!is.na(orig()$Time_Basis)) {paste("Continous data available upon request")})
+     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data available upon request")})
      warn
    })
    
    #remove summary stats that are not 7 day avg
    data<-eventReactive(input$goButton,{
-     dat<-subset(orig(),is.na(orig()$Time_Basis)|orig()$Time_Basis %in% "7DADMean")
+     dat<-if(input$Summary){orig()} else {subset(orig(),is.na(orig()$Time_Basis)|orig()$Time_Basis %in% "7DADMean")}
      dat
    })
    
@@ -450,11 +454,16 @@ server <- function(input, output) {
     #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
      rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
      
-    #only take certain rows, change order so that it is more in line with RPA
+     #create row called Estimated Result, put estimated results in this row, take actual result and change to EST
+     rpa$Est_Result<-ifelse(rpa$Result_Type=="Estimated",rpa$Result,NA)
+     rpa$Result<-ifelse(rpa$Result_Type=="Estimated","EST",rpa$ResultFtem)
+     
+     #only take certain rows, change order so that it is more in line with RPA
      rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
-                              Result_status,MLocID,MonLocType,Result_Comment))
+                              Result_status,Result_Type,Est_Result,MLocID,MonLocType,Result_Comment))
      
+
      
      #need to remove dashes from CASNumber row
      rpa$CASNumber<-gsub("-","",rpa$CASNumber)
@@ -566,11 +575,11 @@ server <- function(input, output) {
        }
        
        #Data sheets
-       addWorksheet(wb,"Counts")
+       addWorksheet(wb,"Diagnostics")
        #create counts of each parameter (combine metals name and fraction first)
             cnt<-namefrac(dsub())
-            counter<-count(cnt,cnt$Char_Name,name="Data Count")
-            writeDataTable(wb,"Counts",x=counter,tableStyle="none")
+            counter<-count(cnt,cnt$Char_Name,name="Counts")
+            writeDataTable(wb,"Diagnostics",x=counter,tableStyle="none")
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
        if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
@@ -586,12 +595,11 @@ server <- function(input, output) {
    
 
 # Download button- only works in Chrome
-# gives an excel workbook with multiple sheets, the first is the serach parameters, the second is the map,
-# the rest are data in various formats
+# gives an excel workbook with multiple sheets
 #set to give NAs as blank cells
 output$downloadData <- downloadHandler(
   
-  filename = function() {paste("AWQMS_Download-", Sys.Date(),"_",input$permit_num,".xlsx", sep="")},
+  filename = function() {paste(input$permit_num,"_AWQMS_Download-", Sys.Date(),".xlsx", sep="")},
   content = function(file) {
     #sheet with query parameters
     saveWorkbook(param(),file)
