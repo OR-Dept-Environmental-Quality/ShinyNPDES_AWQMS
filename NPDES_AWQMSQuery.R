@@ -5,7 +5,7 @@
 #'BEACH Program Site-Ocean','BEACH Program Site-River/Stream',
 #'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
 #'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
-#'River/Stream Perennial'
+#'River/Stream Perennial', 'BEACH Program Site-Estuary'
 # in additon, the query is set up so that when Reject=False (default), no rejected data will be returned
 
 NPDES_AWQMS_Qry<-function 
@@ -47,7 +47,7 @@ NPDES_AWQMS_Qry<-function
     query=paste0(query,"\n AND MonLocType in ({montype*})")
   } 
   else {
-    query=paste0(query,"\n AND MonLocType in ('BEACH Program Site-Ocean','BEACH Program Site-River/Stream',
+    query=paste0(query,"\n AND MonLocType in ('BEACH Program Site-Ocean','BEACH Program Site-River/Stream', 'BEACH Program Site-Estuary',
                'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
                'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
                'River/Stream Perennial','Facility Public Water Supply (PWS)')")
