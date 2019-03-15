@@ -322,7 +322,7 @@ server <- function(input, output) {
    })
    #if summary statistics are included, create flag showing that continous data is available and remove all data that isn't 7 day avg
    output$contwar<-renderText({
-     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data available upon request")})
+     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data available upon request")} else {NULL})
      warn
    })
    
