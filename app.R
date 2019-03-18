@@ -248,6 +248,7 @@ ui <- fluidPage(
                            h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
                            h5("Peruse the 'Table' and 'Map' tabs to view results and locations"),
                            h5("Click 'Download Data' to download results"),
+                           h5("Note: AllRPA also includes Chlorine data"),
                            h5("Warning: after running the query, if you change your mind about whether to include the map, 
                               you must select the box to add the map and then re run the query to ensure that the map will be 
                               part of the download"),
@@ -286,7 +287,7 @@ server <- function(input, output) {
    rrej<-if(input$Reject) {TRUE} else {FALSE} 
    
    #build characteristic list
-   gch<-switch(input$characteristics,"All RPA"=unique(c(phrpa,ammrpa,cuB,dorpa,pestrpa,bneut,aext,vocrpa,metalsrpa)),
+   gch<-switch(input$characteristics,"All RPA"=unique(c(phrpa,ammrpa,cuB,dorpa,pestrpa,bneut,aext,vocrpa,metalsrpa,"Chlorine")),
                  "Copper BLM"=cuB,   
                  "ph RPA"=phrpa,
                  "Ammonia RPA"=ammrpa,
@@ -322,7 +323,7 @@ server <- function(input, output) {
    })
    #if summary statistics are included, create flag showing that continous data is available and remove all data that isn't 7 day avg
    output$contwar<-renderText({
-     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data available upon request")} else {NULL})
+     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")})
      warn
    })
    
@@ -507,7 +508,7 @@ server <- function(input, output) {
                       "Metals and Hardness RPA: ",toString(metalsrpa))
      
      #add continuous data availability warning
-     warn<-unique(if(!is.na(orig()$Time_Basis)) {paste("Continous data available upon request")})
+     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")})
      
      #create workbook and sheet
      wb<-createWorkbook()
