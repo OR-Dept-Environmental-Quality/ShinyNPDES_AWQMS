@@ -455,14 +455,12 @@ server <- function(input, output) {
     #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
      rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
      
-     #create row called Estimated Result, put estimated results in this row, take actual result and change to EST
-     rpa$Est_Result<-ifelse(rpa$Result_Type=="Estimated",rpa$Result,NA)
-     rpa$Result<-ifelse(rpa$Result_Type=="Estimated","EST",rpa$ResultFtem)
-     
+     #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
      #only take certain rows, change order so that it is more in line with RPA
-     rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
+     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | rpa$Result_Numeric<=rpa$MRLValue,
+                 select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
-                              Result_status,Result_Type,Est_Result,MLocID,MonLocType,Result_Comment))
+                              Result_status,Result_Type,MLocID,MonLocType,Result_Comment))
      
 
      
@@ -584,7 +582,11 @@ server <- function(input, output) {
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
        if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
-                           writeDataTable(wb,"RPA_Data_Format",x=rpa(),tableStyle="none")}
+                           writeDataTable(wb,"RPA_Data_Format",startRow=3,x=rpa(),tableStyle="none")
+                           writeData(wb,"RPA_Data_Format",startRow=1,x="Only copy columns with highlighted column headers into RPA workbook")
+                           #create shading style
+                           shade<-createStyle(fgFill="yellow2")
+                           addStyle(wb,"RPA_Data_Format",style=shade,cols=1:15,rows=3)}
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
