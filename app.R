@@ -455,6 +455,9 @@ server <- function(input, output) {
     #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
      rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
      
+     #change data that is between MDL and MRL to have < infront of result
+     rpa$Result<-ifelse(rpa$Result_Numeric<rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue,paste0("<",rpa$Result),rpa$Result)
+     
      #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
      #only take certain rows, change order so that it is more in line with RPA
      rpa<-subset(rpa,rpa$Result_Type!="Estimated" | rpa$Result_Numeric<=rpa$MRLValue,
@@ -577,16 +580,38 @@ server <- function(input, output) {
        addWorksheet(wb,"Diagnostics")
        #create counts of each parameter (combine metals name and fraction first)
             cnt<-namefrac(dsub())
-            counter<-count(cnt,cnt$Char_Name,name="Counts")
-            writeDataTable(wb,"Diagnostics",x=counter,tableStyle="none")
+            counter<-count(cnt,Char_Name,name="Totals")
+            #add counts of actual and estimated
+            actestcnt<-count(cnt,Char_Name,Result_Type,name="Totals")
+            #take actual and estimated and join to counter, based on Char_Name
+            
+            counter<-left_join(counter,subset(actestcnt,Result_Type=='Estimated'),by="Char_Name")
+            counter<-left_join(counter,subset(actestcnt,Result_Type=='Actual'),by="Char_Name")
+            
+            #take columns that we need
+            tots<-subset(counter,select=c(Char_Name,Totals.x,Totals.y,Totals))
+            
+            #rename columns to make them more understandable
+            names(tots)<-c("Pollutant","Total_Count","Estimated_Result_Count","Actual_Result_Count")
+            #replace all NAs with 0
+            tots[is.na(tots)]<-0
+            
+            writeDataTable(wb,"Diagnostics",x=tots,tableStyle="none")
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
        if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
-                           writeDataTable(wb,"RPA_Data_Format",startRow=3,x=rpa(),tableStyle="none")
+                           writeDataTable(wb,"RPA_Data_Format",startRow=4,x=rpa(),tableStyle="none")
                            writeData(wb,"RPA_Data_Format",startRow=1,x="Only copy columns with highlighted column headers into RPA workbook")
+                        
+                           #create bold style
+                           bold<-createStyle(textDecoration="bold")
+                           writeData(wb,"RPA_Data_Format",startRow=2,x="Examine 'Result_Comment' and 'Result_Type' columns to determine data usability")
+                           addStyle(wb,"RPA_Data_Format",style=bold,rows=2,cols=1:15)
+                           
                            #create shading style
                            shade<-createStyle(fgFill="yellow2")
-                           addStyle(wb,"RPA_Data_Format",style=shade,cols=1:15,rows=3)}
+                           addStyle(wb,"RPA_Data_Format",style=shade,cols=1:15,rows=4)
+                           }
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
