@@ -17,6 +17,7 @@ library(leaflet.extras)
 #library(sf)
 library(shinybusy)
 library(openxlsx)
+library(tidyr)
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -482,6 +483,31 @@ server <- function(input, output) {
      am
    })
    
+   #pH RPA output, creates a list of data frames, one for each site
+   pHrpa<-eventReactive(input$goButton,{
+   
+     dat2<-subset(data(),Char_Name %in% c('Temperature, water','Alkalinity, total','pH','Salinity'))
+   
+   
+   #temp, alk, pH, salinity, conversions
+   #salinity in ppt and ppth--all is parts per thousand 
+   #alkalinity is all in mg/l
+   #has no units, and all data in weird units in AWQMS doesn't need any conversion
+   dat2<-unit_conv(dat2,'Temperature, water','deg F', 'deg C')
+   
+   dat2<-subset(dat2,select=c(MLocID,Char_Name,Result,act_id))
+   
+   #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
+   #applies to some ORDEQ data
+   dat2$act_id<-gsub("-FM$","",dat2$act_id)
+   
+   
+   dat3<-split(dat2,dat2$MLocID)
+   dat3<-lapply(dat3,function(x) spread(x,key=Char_Name,value=Result))
+   
+   dat3
+   
+   })
 
    #create list of the parameters in query, get it into a formatted excel to export so we have record of query
    #add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is available
@@ -521,6 +547,8 @@ server <- function(input, output) {
        mainTitle<-createStyle(fontSize=16,fontColour="blue",textDecoration=c("bold","underline"))
        subTitle<-createStyle(fontSize=14,textDecoration="italic")
        wrap<-createStyle(wrapText=TRUE)
+       #create bold style
+       bold<-createStyle(textDecoration="bold")
        
        # Add title
        title<-"RPA Data Search Criteria"
@@ -576,7 +604,7 @@ server <- function(input, output) {
        insertImage(wb,"Map","map.jpeg",width=10,height=7)
        }
        
-       #Data sheets
+       #Diagnostics sheet, for totals and other stats we want to calculate
        addWorksheet(wb,"Diagnostics")
        #create counts of each parameter (combine metals name and fraction first)
             cnt<-namefrac(dsub())
@@ -596,27 +624,51 @@ server <- function(input, output) {
             #replace all NAs with 0
             tots[is.na(tots)]<-0
             
-            writeDataTable(wb,"Diagnostics",x=tots,tableStyle="none")
+            writeDataTable(wb,"Diagnostics",x=tots,tableStyle="none",startRow=3,startCol=1)
+            writeData(wb,"Diagnostics",startRow=1,startCol=1,x="Estimated Result Count column contains ALL estimated results, including those that are between MDL and MRL (QL and DL)")
+            setColWidths(wb,"Diagnostics",cols=1:5,widths=20)
+
+  #Data worksheets
+       # All data      
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
+        
+       #RPA          
        if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
                            writeDataTable(wb,"RPA_Data_Format",startRow=4,x=rpa(),tableStyle="none")
                            writeData(wb,"RPA_Data_Format",startRow=1,x="Only copy columns with highlighted column headers into RPA workbook")
                         
-                           #create bold style
-                           bold<-createStyle(textDecoration="bold")
                            writeData(wb,"RPA_Data_Format",startRow=2,x="Examine 'Result_Comment' and 'Result_Type' columns to determine data usability")
                            addStyle(wb,"RPA_Data_Format",style=bold,rows=2,cols=1:15)
                            
                            #create shading style
                            shade<-createStyle(fgFill="yellow2")
                            addStyle(wb,"RPA_Data_Format",style=shade,cols=1:15,rows=4)
-                           }
+                                                          }
+       #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
+       #Ammonia RPA                     
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
                            writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
        
+        #pH RPA
+        if (length(pHrpa())!=0) {addWorksheet(wb,"pH_RPA")
+            #add counter to increment
+            num<-1
+            
+            #remove MLocID column, overkill, keep act_id column, want something to tie back to original data
+            pHrpa<-lapply(pHrpa(),function(x) x[,-c(1)])
+            
+            #for loop to write data all on one spreadsheet -needs work
+            for (i in 1:length(pHrpa())) {
+              
+              writeData(wb,"pH_RPA",x=names(pHrpa[i]),startRow=1,startCol=num+2)
+              addStyle(wb,"pH_RPA",style=bold,rows=1,cols=1:1000)
+              writeData(wb,"pH_RPA",x=pHrpa[[i]],startRow=3,startCol=num,colNames=TRUE)
+              num<-num+7
+            }
+        }   
      wb
    })
    
