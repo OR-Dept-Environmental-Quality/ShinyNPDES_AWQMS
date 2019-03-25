@@ -549,6 +549,8 @@ server <- function(input, output) {
        wrap<-createStyle(wrapText=TRUE)
        #create bold style
        bold<-createStyle(textDecoration="bold")
+       #create rotated text styel
+       rotate<-createStyle(textRotation = 45)
        
        # Add title
        title<-"RPA Data Search Criteria"
@@ -634,16 +636,17 @@ server <- function(input, output) {
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
         
        #RPA          
-       if (nrow(rpa())!=0) {addWorksheet(wb,"RPA_Data_Format")
-                           writeDataTable(wb,"RPA_Data_Format",startRow=4,x=rpa(),tableStyle="none")
-                           writeData(wb,"RPA_Data_Format",startRow=1,x="Only copy columns with highlighted column headers into RPA workbook")
+       if (nrow(rpa())!=0) {addWorksheet(wb,"Toxics_Data_Format")
+                           writeDataTable(wb,"Toxics_Data_Format",startRow=4,x=rpa(),tableStyle="none")
+                           writeData(wb,"Toxics_Data_Format",startRow=1,x="Only copy columns with highlighted column headers into RPA workbook")
                         
-                           writeData(wb,"RPA_Data_Format",startRow=2,x="Examine 'Result_Comment' and 'Result_Type' columns to determine data usability")
-                           addStyle(wb,"RPA_Data_Format",style=bold,rows=2,cols=1:15)
+                           writeData(wb,"Toxics_Data_Format",startRow=2,x="Examine 'Result_Comment' and 'Result_Type' columns to determine data usability")
+                           addStyle(wb,"Toxics_Data_Format",style=bold,rows=2,cols=1:15)
                            
                            #create shading style
                            shade<-createStyle(fgFill="yellow2")
-                           addStyle(wb,"RPA_Data_Format",style=shade,cols=1:15,rows=4)
+                           addStyle(wb,"Toxics_Data_Format",style=shade,cols=1:15,rows=4)
+                           addStyle(wb,"Toxics_Data_Format",style=rotate,cols=1:20,rows=4)
                                                           }
        #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
