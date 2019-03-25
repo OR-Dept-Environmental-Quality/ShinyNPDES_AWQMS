@@ -18,6 +18,7 @@ library(leaflet.extras)
 library(shinybusy)
 library(openxlsx)
 library(tidyr)
+library(tidyverse)
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -486,6 +487,7 @@ server <- function(input, output) {
    #pH RPA output, creates a list of data frames, one for each site
    pHrpa<-eventReactive(input$goButton,{
    
+     #subset data so we only get the parameters we need 
      dat2<-subset(data(),Char_Name %in% c('Temperature, water','Alkalinity, total','pH','Salinity'))
    
    
@@ -495,13 +497,14 @@ server <- function(input, output) {
    #has no units, and all data in weird units in AWQMS doesn't need any conversion
    dat2<-unit_conv(dat2,'Temperature, water','deg F', 'deg C')
    
+   #only need select set of columns
    dat2<-subset(dat2,select=c(MLocID,Char_Name,Result,act_id))
    
    #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
    #applies to some ORDEQ data
    dat2$act_id<-gsub("-FM$","",dat2$act_id)
    
-   
+   #split data by monitoring location (creates list of dataframes) and convert data from long to wide format
    dat3<-split(dat2,dat2$MLocID)
    dat3<-lapply(dat3,function(x) spread(x,key=Char_Name,value=Result))
    
@@ -663,12 +666,25 @@ server <- function(input, output) {
             #remove MLocID column, overkill, keep act_id column, want something to tie back to original data
             pHrpa<-lapply(pHrpa(),function(x) x[,-c(1)])
             
-            #for loop to write data all on one spreadsheet -needs work
+            #for loop to write data all on one spreadsheet
             for (i in 1:length(pHrpa())) {
               
+              #add header that is monlocID
               writeData(wb,"pH_RPA",x=names(pHrpa[i]),startRow=1,startCol=num+2)
               addStyle(wb,"pH_RPA",style=bold,rows=1,cols=1:1000)
+              
+              #make sure all column are there for each parameter (add as NA since there is no data)
+              pHrpa[[i]]<-if(!("Temperature, water" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Temperature, water"=NA)} else {pHrpa[[i]]}
+              pHrpa[[i]]<-if(!("pH" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "pH"=NA)} else {pHrpa[[i]]}
+              pHrpa[[i]]<-if(!("Alkalinity, total" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Alkalinity, total"=NA)} else {pHrpa[[i]]}
+              pHrpa[[i]]<-if(!("Salinity" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Salinity"=NA)} else {pHrpa[[i]]}
+              
+              #reorder columns
+              pHrpa[[i]]<-pHrpa[[i]][,c("act_id","pH","Temperature, water","Salinity","Alkalinity, total")]
+              
+              #add data
               writeData(wb,"pH_RPA",x=pHrpa[[i]],startRow=3,startCol=num,colNames=TRUE)
+              #add 7 to counter so that next station doesn't overwrite the previous
               num<-num+7
             }
         }   
