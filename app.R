@@ -403,7 +403,9 @@ server <- function(input, output) {
    rpa<-eventReactive(input$goButton,{
      #remove temperature, DO, pH and other non-toxics RPA characteristics
      rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)",
-                                           "Dissolved oxygen saturation","Salinity","Organic carbon")))
+                                           "Dissolved oxygen saturation","Salinity","Organic carbon",
+                                           "Biochemical oxygen demand, non-standard conditions", 
+                                           "Biochemical oxygen demand, standard conditions")))
     
      if (nrow(rpa)!=0){
        #combine method_code and method_Context columns
@@ -458,7 +460,10 @@ server <- function(input, output) {
      rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
      
      #change data that is between MDL and MRL to have < infront of result
-     rpa$Result<-ifelse(rpa$Result_Numeric<rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue,paste0("<",rpa$Result),rpa$Result)
+     rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & (!is.na(rpa$MRLValue)) 
+                        & rpa$Result_Numeric<rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue,
+                        paste0("<",rpa$Result),
+                        rpa$Result)
      
      #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
      #only take certain rows, change order so that it is more in line with RPA
