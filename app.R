@@ -43,10 +43,13 @@ source("NameandFraction.R")
 #make it so only the RPA groupings are shown in the drop down
 
 chars <- c("All RPA","All Toxics","Copper BLM","ph RPA","Ammonia RPA","DO RPA","Pesticides and PCB RPA","Base Neutral RPA", "Acid Extractable RPA",
-           "VOC RPA","Metals RPA","None")
+           "VOC RPA","Metals RPA","Industrial General","None")
 
 #create variables with specific characteristics for the different groups
 
+#Industrial general parameters
+ingen<-c("Chemical oxygen demand","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen", "Organic carbon",
+         "Biochemical oxygen demand, non-standard conditions","Biochemical oxygen demand, standard conditions","pH","Temperature, water")
 #pH RPA
 phrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity")
 
@@ -73,12 +76,12 @@ pestrpa<-c("p,p'-DDT","Parathion","Chlordane","Lindane","Dieldrin","Endrin","Met
 bneut<-c("Benzo[a]pyrene","Dibenz[a,h]anthracene","Benz[a]anthracene","N-Nitrosodimethylamine","Hexachloroethane",
          "Hexachlorocyclopentadiene","Isophorone","Acenaphthene","Diethyl phthalate","Dibutyl phthalate","Phenanthrene",
          "Butyl benzyl phthalate","N-Nitrosodiphenylamine","Fluorene","Hexachlorobutadiene","Naphthalene","2-Chloronaphthalene",
-         "3,3'-Dichlorobenzidine","Benzidine","1,2,4,5-Tetrachlorobenzene","Nitrobenzene","p-Bromophenyl phenyl ether",
+         "3,3'-Dichlorobenzidine","Benzidine","1,2,4,5-Tetrachlorobenzene","Nitrobenzene","BDE-003",
          "Bis(2-chloro-1-methylethyl) ether","Bis(2-chloroethyl) ether","Bis(2-chloroethoxy)methane","Di(2-ethylhexyl) phthalate",
          "Di-n-octyl phthalate","Hexachlorobenzene","Anthracene","1,2,4-Trichlorobenzene","2,4-Dinitrotoluene","1,2-Diphenylhydrazine",
          "Pyrene","Dimethyl phthalate","Benzo[ghi]perylene","Indeno[1,2,3-cd]pyrene","Benzo(b)fluoranthene","Fluoranthene",
          "Benzo[k]fluoranthene","Acenaphthylene","Chrysene","2,6-Dinitrotoluene","Pentachlorobenzene","N-Nitrosodi-n-propylamine",
-         "p-Chlorophenyl phenyl ether")
+         "p-Chlorophenyl phenyl ether","Azobenzene")
 
 #Acid Extractable
 aext<-c("2,4-Dinitrophenol","p-Chloro-m-cresol","Pentachlorophenol","2,4,6-Trichlorophenol","o-Nitrophenol","o-Chlorophenol",
@@ -87,10 +90,10 @@ aext<-c("2,4-Dinitrophenol","p-Chloro-m-cresol","Pentachlorophenol","2,4,6-Trich
 #Volatile Organic Carbons
 vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane","Methyl bromide","Chloromethane","Chloroethane",
           "Vinyl chloride","Methylene chloride","Tribromomethane","Dichlorobromomethane","1,1-Dichloroethane","1,1-Dichloroethylene",
-          "1,2-Dichloropropane","1,1,2-Trichloroethane","Trichloroethene(TCE)","1,1,2,2-Tetrachloroethane","o-Dichlorobenzene",
+          "1,2-Dichloropropane","1,1,2-Trichloroethane","Trichloroethene (TCE)","1,1,2,2-Tetrachloroethane","o-Dichlorobenzene",
           "Ethylbenzene","p-Dichlorobenzene","Acrolein","Allyl chloride","1,2-Dichloroethane","Toluene","Chlorobenzene",
           "2-Chloroethyl vinyl ether","Chlorodibromomethane","Tetrachloroethene","Tetrachloroethylene","trans-1,2-Dichloroethylene",
-          "m-Dichlorobenzene","1,3-Dichloropropene")
+          "m-Dichlorobenzene","1,3-Dichloropropene","Acrylonitrile")
 
 #Metals and Hardness
 metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
@@ -289,7 +292,7 @@ server <- function(input, output) {
    rrej<-if(input$Reject) {TRUE} else {FALSE} 
    
    #build characteristic list
-   gch<-switch(input$characteristics,"All RPA"=unique(c(phrpa,ammrpa,cuB,dorpa,pestrpa,bneut,aext,vocrpa,metalsrpa,"Chlorine")),
+   gch<-switch(input$characteristics,"All RPA"=unique(c(phrpa,ammrpa,cuB,dorpa,ingen,pestrpa,bneut,aext,vocrpa,metalsrpa,"Chlorine")),
                  "Copper BLM"=cuB,   
                  "ph RPA"=phrpa,
                  "Ammonia RPA"=ammrpa,
@@ -300,6 +303,7 @@ server <- function(input, output) {
                  "VOC RPA"=vocrpa,
                  "Metals RPA"=metalsrpa,
                  "All Toxics"=tox,
+                 "Industrial General"=ingen,
                  "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
    one<-c(input$oneoff)
    rchar<-c(gch,one)
@@ -540,7 +544,8 @@ server <- function(input, output) {
                       "Base Neutral RPA: ",toString(bneut),"\n\n",
                       "Acid Exractable RPA: ",toString(aext),"\n\n",
                       "Volatile Organic Carbon RPA: ",toString(vocrpa), "\n\n",
-                      "Metals and Hardness RPA: ",toString(metalsrpa))
+                      "Metals and Hardness RPA: ",toString(metalsrpa), "\n\n",
+                      "Industrial General Parameters: ",toString(ingen))
      
      #add continuous data availability warning
      warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")})
