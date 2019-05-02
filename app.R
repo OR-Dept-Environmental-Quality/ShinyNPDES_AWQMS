@@ -253,7 +253,7 @@ ui <- fluidPage(
                            h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
                            h5("Peruse the 'Table' and 'Map' tabs to view results and locations"),
                            h5("Click 'Download Data' to download results"),
-                           h5("Note: AllRPA also includes Chlorine data"),
+                           h5("Note: All RPA also includes Chlorine data"),
                            h5("Warning: after running the query, if you change your mind about whether to include the map, 
                               you must select the box to add the map and then re run the query to ensure that the map will be 
                               part of the download"),
