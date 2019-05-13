@@ -657,9 +657,8 @@ server <- function(input, output) {
                            addStyle(wb,"Toxics_Data_Format",style=bold,rows=2,cols=1:15)
                            
                            #create shading style
-                           shade<-createStyle(fgFill="yellow2")
-                           addStyle(wb,"Toxics_Data_Format",style=shade,cols=1:15,rows=4)
-                           addStyle(wb,"Toxics_Data_Format",style=rotate,cols=1:20,rows=4)
+                           shaderot<-createStyle(fgFill="yellow2",textRotation = 45)
+                           addStyle(wb,"Toxics_Data_Format",style=shaderot,cols=1:15,rows=4)
                                                           }
        #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
