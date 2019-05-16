@@ -13,11 +13,14 @@ amRPA<-function(x){
           "Conductivity","Ammonia and ammonium")
   
   #remove any samples that are calculated from continuous data (eg. 7 day min)
-  y<-subset(x,x$Char_Name %in% char & is.na(x$Statistical_Base)) #& 
+  y<-subset(x,x$Char_Name %in% char & is.na(x$Statistical_Base))
+  
+  #there were some special projects at one point that looked at "dissolved alkalinity"-according to Linda McRae (5/16/2019) 
+  #what they did was take two samples, one was filtered (dissolved alkalinity) and the other one wasn't (total alkalinity)
+  #usually alkalinity is taken on a non-filtered sample, so we shall remove the "dissolved alkalinity" samples
+  y<-subset(y,!(y$Char_Name=="Alkalinity, total" & y$Sample_Fraction=="Dissolved"))
   
   #combine name and method speciation, otherwise we get a bunch of rows we don't need
-  #mostly interested in whether an analyte is Total Recoverable or Dissolved, and only for metals
-  #can leave out some the other Sample Fractions
   y$Char_Name<-paste0(y$Char_Name,(ifelse(is.na(y$Method_Speciation),paste(""),paste0(",",y$Method_Speciation))))
   
   #just want a subset of the columns, too many columns makes reshape very complicated
@@ -31,3 +34,7 @@ amRPA<-function(x){
   
   return(res)
 }
+
+#library(AWQMSdata)
+#test<-AWQMS_Data(startdate="2015-01-01",enddate="05-10-2019",station="10768-ORDEQ")
+#try<-amRPA(test)
