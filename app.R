@@ -499,7 +499,9 @@ server <- function(input, output) {
      #subset data so we only get the parameters we need 
      dat2<-subset(data(),Char_Name %in% c('Temperature, water','Alkalinity, total','pH','Salinity'))
    
-   
+     #remove "dissolved alkalinity" samples- were only done in a few projects and are not the way we usually do alkalinity
+     dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved"))
+     
    #temp, alk, pH, salinity, conversions
    #salinity in ppt and ppth--all is parts per thousand 
    #alkalinity is all in mg/l
@@ -513,8 +515,7 @@ server <- function(input, output) {
    #applies to some ORDEQ data
    dat2$act_id<-gsub("-FM$","",dat2$act_id)
    
-   #remove "dissolved alkalinity" samples- were only done in a few projects and are not the way we usually do alkalinity
-   dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved"))
+
    
    #split data by monitoring location (creates list of dataframes) and convert data from long to wide format
    dat3<-split(dat2,dat2$MLocID)
