@@ -24,10 +24,10 @@ amRPA<-function(x){
   y$Char_Name<-paste0(y$Char_Name,(ifelse(is.na(y$Method_Speciation),paste(""),paste0(",",y$Method_Speciation))))
   
   #just want a subset of the columns, too many columns makes reshape very complicated
-  x<-subset(y,select=c("Char_Name","Result","Result_Unit","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1"))
+  x<-subset(y,select=c("Char_Name","Result","Result_Unit","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1","act_id"))
   
   res<-reshape(x, timevar="Char_Name",
-               idvar=c("MLocID","SampleStartDate","SampleStartTime","OrganizationID","Project1"),
+               idvar=c("act_id","MLocID","SampleStartDate","SampleStartTime","OrganizationID","Project1"),
                direction="wide") 
   
   #note, if you get warnings with res saying that multiple rows match, look for duplicates in data  
