@@ -26,6 +26,8 @@ amRPA<-function(x){
   #just want a subset of the columns, too many columns makes reshape very complicated
   x<-subset(y,select=c("Char_Name","Result","Result_Unit","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1","act_id"))
   
+  
+  #rehape data to wide format
   res<-reshape(x, timevar="Char_Name",
                idvar=c("act_id","MLocID","SampleStartDate","SampleStartTime","OrganizationID","Project1"),
                direction="wide") 
