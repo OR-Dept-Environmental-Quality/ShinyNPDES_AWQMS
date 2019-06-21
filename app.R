@@ -498,9 +498,16 @@ server <- function(input, output) {
    
      #subset data so we only get the parameters we need 
      dat2<-subset(data(),Char_Name %in% c('Temperature, water','Alkalinity, total','pH','Salinity'))
+     
+     #remove any samples that are calculated from continuous data (eg. 7 day min)
+     dat2<-subset(dat2, is.na(dat2$Statistical_Base))
    
      #remove "dissolved alkalinity" samples- were only done in a few projects and are not the way we usually do alkalinity
      dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved"))
+     
+     #have occasional issues with 2 pH values (one field, one lab) for ORDEQ data
+     #remove Sample-Routine pH if ORDEQ data
+     dat2<-subset(dat2,!(dat2$Char_Name=='pH' & dat2$OrganizationID=='OREGONDEQ' & dat2$Activity_Type=='Sample-Routine'))
      
    #temp, alk, pH, salinity, conversions
    #salinity in ppt and ppth--all is parts per thousand 
@@ -514,8 +521,6 @@ server <- function(input, output) {
    #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
    #applies to some ORDEQ data
    dat2$act_id<-gsub("-FM$","",dat2$act_id)
-   
-
    
    #split data by monitoring location (creates list of dataframes) and convert data from long to wide format
    dat3<-split(dat2,dat2$MLocID)
@@ -628,18 +633,19 @@ server <- function(input, output) {
        #create counts of each parameter (combine metals name and fraction first)
             cnt<-namefrac(dsub())
             counter<-count(cnt,Char_Name,name="Totals")
-            #add counts of actual and estimated
+            #add counts of actual and estimated and calculated
             actestcnt<-count(cnt,Char_Name,Result_Type,name="Totals")
-            #take actual and estimated and join to counter, based on Char_Name
+            #take actual and estimated and calculated and join to counter, based on Char_Name
             
             counter<-left_join(counter,subset(actestcnt,Result_Type=='Estimated'),by="Char_Name")
             counter<-left_join(counter,subset(actestcnt,Result_Type=='Actual'),by="Char_Name")
+            counter<-left_join(counter,subset(actestcnt,Result_Type=='Calculated'),by="Char_Name")
             
             #take columns that we need
-            tots<-subset(counter,select=c(Char_Name,Totals.x,Totals.y,Totals))
+            tots<-subset(counter,select=c(Char_Name,Totals.x,Totals.y,Totals.x.x,Totals.y.y))
             
             #rename columns to make them more understandable
-            names(tots)<-c("Pollutant","Total_Count","Estimated_Result_Count","Actual_Result_Count")
+            names(tots)<-c("Pollutant","Total_Count","Estimated_Result_Count","Actual_Result_Count","Calculated_Result_Count")
             #replace all NAs with 0
             tots[is.na(tots)]<-0
             
