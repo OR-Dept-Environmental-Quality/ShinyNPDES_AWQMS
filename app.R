@@ -106,7 +106,8 @@ metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum"
 tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
 
 #one-off characteristics of interest
-oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB))
+oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
+                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids"))
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
