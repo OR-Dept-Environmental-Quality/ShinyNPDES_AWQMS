@@ -26,6 +26,9 @@ amRPA<-function(x){
   #just want a subset of the columns, too many columns makes reshape very complicated
   x<-subset(y,select=c("Char_Name","Result","Result_Unit","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1","act_id"))
   
+  #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
+  #applies to some ORDEQ data
+  x$act_id<-gsub("-FM$","",x$act_id)
   
   #rehape data to wide format
   res<-reshape(x, timevar="Char_Name",
