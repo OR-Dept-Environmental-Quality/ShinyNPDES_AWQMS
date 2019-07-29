@@ -9,7 +9,7 @@
 # in additon, the query is set up so that when Reject=False (default), no rejected data will be returned
 
 NPDES_AWQMS_Qry<-function 
-(startdate = "2000-01-01", enddate = NULL, station = NULL, montype = NULL, char = NULL, org = NULL, 
+(startdate = "2000-01-01", enddate = NULL, station = NULL, project=NULL, montype = NULL, char = NULL, org = NULL, 
  HUC8 = NULL, HUC8_Name = NULL,reject=FALSE) 
 {
   if (missing(startdate)) {
@@ -31,6 +31,11 @@ NPDES_AWQMS_Qry<-function
   }
   if (length(char) > 0) {
     query = paste0(query, "\n AND Char_Name in ({char*}) ")
+  }
+  
+  if (length(project) > 0) {
+    query = paste0(query, "\n AND (a.Project1 in ({project*}) OR a.Project2 in ({project*})) ")
+    
   }
   if (length(org) > 0) {
     query = paste0(query, "\n AND OrganizationID in ({org*}) ")
