@@ -34,7 +34,7 @@ NPDES_AWQMS_Qry<-function
   }
   
   if (length(project) > 0) {
-    query = paste0(query, "\n AND (a.Project1 in ({project*}) OR a.Project2 in ({project*})) ")
+    query = paste0(query, "\n AND Project1 in ({project*}) ")
     
   }
   if (length(org) > 0) {
