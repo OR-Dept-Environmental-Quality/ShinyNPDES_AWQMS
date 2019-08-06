@@ -271,7 +271,10 @@ ui <- fluidPage(
         tabPanel("Table",
                  dataTableOutput("table")),
         #add leaflet map
-        tabPanel("Map",leafletOutput("locs"))
+        tabPanel("Map",leafletOutput("locs")),
+        #check diagnositcs
+        tabPanel("RPA Summary",
+                 dataTableOutput("RPAsum"))
         )
    )
 ),
@@ -407,11 +410,8 @@ server <- function(input, output) {
    
    #take data, make subtable just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
-     #remove temperature, DO, pH and other non-toxics RPA characteristics
-     rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)",
-                                           "Dissolved oxygen saturation","Salinity","Organic carbon",
-                                           "Biochemical oxygen demand, non-standard conditions", 
-                                           "Biochemical oxygen demand, standard conditions")))
+     #only keep characteristics that are in the tox character list
+     rpa<-subset(data(),(Char_Name %in% tox))
     
      if (nrow(rpa)!=0){
        #combine method_code and method_Context columns
@@ -472,12 +472,13 @@ server <- function(input, output) {
                         rpa$Result)
      
      #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
+     #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
+     #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
      #only take certain rows, change order so that it is more in line with RPA
-     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | rpa$Result_Numeric<=rpa$MRLValue,
+     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>MDLValue),
                  select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,Result_Type,MLocID,MonLocType,Result_Comment))
-     
 
      
      #need to remove dashes from CASNumber row
@@ -487,6 +488,47 @@ server <- function(input, output) {
      
    })
    
+   #RPA summary
+   RPAsum<-eventReactive(input$goButton, {
+      if (nrow(rpa())!=0){
+         RPAsum<-#rpa()%>%
+            #1,2,4-Trichlorobenzene gets counted twice since it is run as both as part of the volatile and semivolatile suite...
+            #for NPDES purposes, only the semi-volatile analyses count, so remove anything done by 624 or 624.1
+            subset(rpa(),
+                   subset= (!(Method_Code==c("624 (U.S. Environmental Protection Agency)") & Char_Name==c("1,2,4-Trichlorobenzene"))))%>%
+            
+            #need to add code to figure out what to do with NDs and with <, then we can group by and summarise
+            #directions on how to deal with NDs and < taken from RPA IMD Appendix C.
+            #for calculating mean, ND=0, between DL and QL=DL
+            mutate(Result_mean = case_when(Result=="ND" ~ 0,
+                                           Result>MRLValue ~ as.numeric(Result),
+                                           "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                           "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
+                                           )) %>%
+            #for calculating geo mean, ND=1/2DL, but need to be careful for carcinogens- sometimes 1/2 DL is near the  WQ criterion, which can lead to RP when we don't actually know
+            #create column that uses result for caclulating the geo mean
+            mutate(Result_geomean=case_when(Result=="ND" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
+                                            Result=="ND" & is.na(MDLValue) ~ as.numeric(MRLValue)/2,
+                                            Result>MRLValue ~ as.numeric(Result),
+                                            "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                            "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
+            )) %>%
+            group_by(Char_Name)%>%
+            #do summary stats
+            #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
+            summarise(count_all = n(), count_result = sum(Result!="ND"), mean = round(mean(Result_mean, na.rm = TRUE),2),sd = round(sd(Result_mean, na.rm = T),2), max = as.character(max(Result_mean, na.rm = TRUE)), geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
+            #for CV, if number of observations is less than 10 then CV=0.6, else calculate the CV
+            mutate(CV = ifelse(count_all>=10,round(sd/mean,2),0.6))
+        
+      }
+      RPAsum
+   })
+   
+   #table of queried data for Shiny app view  
+   output$RPAsum<-renderDataTable({
+      
+      RPAsum()
+   })
    #ammonia RPA output, similar to Copper BLM output
    amm<-eventReactive(input$goButton,{
      
@@ -672,6 +714,11 @@ server <- function(input, output) {
                            shaderot<-createStyle(fgFill="yellow2",textRotation = 45)
                            addStyle(wb,"Toxics_Data_Format",style=shaderot,cols=1:15,rows=4)
                                                           }
+       
+       #RPA summary stats
+            if (nrow(RPAsum())!=0) {addWorksheet(wb,"Toxics_SummaryStats")
+               writeDataTable(wb,"Toxics_SummaryStats",startRow=2,x=RPAsum(),tableStyle="none")
+            }
        #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
