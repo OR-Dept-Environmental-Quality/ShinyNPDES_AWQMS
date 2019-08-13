@@ -408,10 +408,7 @@ server <- function(input, output) {
    #take data, make subtable just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
      #remove temperature, DO, pH and other non-toxics RPA characteristics
-     rpa<-subset(data(),!(Char_Name %in% c("Temperature, water","pH","Conductivity","Dissolved oxygen (DO)",
-                                           "Dissolved oxygen saturation","Salinity","Organic carbon",
-                                           "Biochemical oxygen demand, non-standard conditions", 
-                                           "Biochemical oxygen demand, standard conditions")))
+     rpa<-subset(data(),(Char_Name %in% tox))
     
      if (nrow(rpa)!=0){
        #combine method_code and method_Context columns
