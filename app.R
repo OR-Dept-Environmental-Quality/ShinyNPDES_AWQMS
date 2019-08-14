@@ -475,7 +475,7 @@ server <- function(input, output) {
      #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
      #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
      #only take certain rows, change order so that it is more in line with RPA
-     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>MDLValue),
+     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue),
                  select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,Result_Type,MLocID,MonLocType,Result_Comment))
