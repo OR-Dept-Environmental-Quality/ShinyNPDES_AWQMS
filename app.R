@@ -529,7 +529,7 @@ server <- function(input, output) {
          RPAsum<-unique(left_join(RPAsum,cas, by="Char_Name"))
          
          #get into an order that can go right into the RPA spreadsheet
-         RPAsum<-subset(RPAsum,select=c(Char_Name,count_all,count_result,max,geomean,mean,CV,CASNumber))
+         RPAsum<-subset(RPAsum,select=c(Char_Name,count_result,count_all,max,geomean,mean,CV,CASNumber))
    
         
       }
