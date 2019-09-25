@@ -514,11 +514,23 @@ server <- function(input, output) {
                                             "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
             )) %>%
             group_by(Char_Name)%>%
+            #mutate(cas = unique(rpa()$CASNumber))%>%
             #do summary stats
             #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
-            summarise(count_all = n(), count_result = sum(Result!="ND"), mean = round(mean(Result_mean, na.rm = TRUE),2),sd = round(sd(Result_mean, na.rm = T),2), max = as.character(max(Result_mean, na.rm = TRUE)), geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
+            summarise(count_all = n(), count_result = sum(Result!="ND"), mean = round(mean(Result_mean, na.rm = TRUE),2),
+                      sd = round(sd(Result_mean, na.rm = T),2), max = as.character(max(Result_mean, na.rm = TRUE)), 
+                      geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
             #for CV, if number of observations is less than 10 then CV=0.6, else calculate the CV
             mutate(CV = ifelse(count_all>=10,round(sd/mean,2),0.6))
+         
+         
+         #add CAS#
+         cas<-subset(rpa(),select=c(unique(Char_Name),unique(CASNumber)))
+         RPAsum<-unique(left_join(RPAsum,cas, by="Char_Name"))
+         
+         #get into an order that can go right into the RPA spreadsheet
+         RPAsum<-subset(RPAsum,select=c(Char_Name,count_all,count_result,max,geomean,mean,CV,CASNumber))
+   
         
       }
       RPAsum
@@ -692,6 +704,8 @@ server <- function(input, output) {
             names(tots)<-c("Pollutant","Total_Count","Estimated_Result_Count","Actual_Result_Count","Calculated_Result_Count")
             #replace all NAs with 0
             tots[is.na(tots)]<-0
+            
+            
             
             writeDataTable(wb,"Diagnostics",x=tots,tableStyle="none",startRow=3,startCol=1)
             writeData(wb,"Diagnostics",startRow=1,startCol=1,x="Estimated Result Count column contains ALL estimated results, including those that are between MDL and MRL (QL and DL)")
