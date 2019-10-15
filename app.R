@@ -107,7 +107,7 @@ tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
 
 #one-off characteristics of interest
 oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
-                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese"))
+                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids"))
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -488,7 +488,7 @@ server <- function(input, output) {
      
    })
    
-   #RPA summary
+   #RPA summary, this is to help replace the summary stats page in the RPA spreadsheet
    RPAsum<-eventReactive(input$goButton, {
       if (nrow(rpa())!=0){
          RPAsum<-#rpa()%>%
