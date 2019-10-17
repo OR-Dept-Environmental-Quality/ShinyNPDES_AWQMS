@@ -532,7 +532,9 @@ server <- function(input, output) {
          RPAsum<-subset(RPAsum,select=c(Char_Name,count_result,count_all,max,geomean,mean,CV,CASNumber))
    
         
-      }
+      } 
+      #need to add else statement or the RPAsum dataframe is not created at all and then the data download breaks
+      else {RPAsum<-data.frame()}
       RPAsum
    })
    
@@ -730,7 +732,7 @@ server <- function(input, output) {
                                                           }
        
        #RPA summary stats
-            if (nrow(RPAsum())!=0) {addWorksheet(wb,"Toxics_SummaryStats")
+       if (nrow(RPAsum())!=0) {addWorksheet(wb,"Toxics_SummaryStats")
                writeDataTable(wb,"Toxics_SummaryStats",startRow=2,x=RPAsum(),tableStyle="none")
             }
        #Copper BLM                    
