@@ -118,6 +118,8 @@ if(!file.exists("query_cache.RData") |
 #NPDES_AWQMS_Stations functions only pulls stations of interest to NPDES program
 station <- NPDES_AWQMS_Stations()
 Mtype<-station$MonLocType
+auid<-station$AU_ID
+auid<-sort(station$AU_ID)
 station <- station$MLocID
 station <- sort(station)
 
@@ -125,8 +127,10 @@ organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- sort(organization)
 
+
+
 #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
-save(station, Mtype, organization, file = 'query_cache.RData')
+save(station, Mtype, auid, organization, file = 'query_cache.RData')
 } else {
   load("query_cache.RData")
 }
@@ -203,13 +207,19 @@ ui <- fluidPage(
                        multiple=TRUE),
        
        #add warning
-       tags$em("Warning: HUC8 may not include all stations"),
+       tags$em("Warning: HUC8 may not include all stations on coast"),
        
        # huc8 names 
        selectizeInput("huc8_nms",
                        "Select HUC 8",
                        choices = HUC8_Names,
                        multiple = TRUE),
+       
+       #AU_IDs
+       selectizeInput("AUID",
+                      "Select Assessment Unit",
+                      choices = auid,
+                      multiple = TRUE),
     
        #Orgs
        selectizeInput("orgs",
@@ -315,7 +325,7 @@ server <- function(input, output) {
    
    #actual query for data
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
-                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
+                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID),reject=rrej)
    
    
    #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
@@ -601,6 +611,7 @@ server <- function(input, output) {
      charc<- paste0("RPA Group = ",toString(sprintf("'%s'", input$characteristics)))
      onof<- paste0("Characteristics = ",toString(sprintf("'%s'", input$oneoff)))
      huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
+     auids<-paste0("Assessment Unit = ",toString(sprintf("'%s'",input$AUID)))
      organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
      allchar<- paste0("List of all potential RPA characteristics (All Toxics includes Pesticides/PCB RPA, Base Neutral RPA, Acid Extractable RPA, VOC RPA, and Metals RPA) \n",
                       "pH RPA: ",toString(phrpa), "\n\n",
@@ -659,11 +670,12 @@ server <- function(input, output) {
        writeData(wb,sheet="Search Criteria",x=charc,startCol=1,startRow=11)
        writeData(wb,sheet="Search Criteria",x=onof,startCol=1,startRow=12)
        writeData(wb,sheet="Search Criteria",x=huc8s,startCol=1,startRow=13)
-       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=14)
-       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=15)
-       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=16)
+       writeData(wb,sheet="Search Criteria",x=auids,startCol=1,startRow=14)
+       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=15)
+       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=16)
+       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=17)
        
-       addStyle(wb,sheet="Search Criteria",style=wrap,rows=16,cols=1)
+       addStyle(wb,sheet="Search Criteria",style=wrap,rows=17,cols=1)
        setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
        
        #Map
