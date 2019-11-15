@@ -673,9 +673,9 @@ server <- function(input, output) {
        writeData(wb,sheet="Search Criteria",x=auids,startCol=1,startRow=14)
        writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=15)
        writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=16)
-       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=17)
+       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=18)
        
-       addStyle(wb,sheet="Search Criteria",style=wrap,rows=17,cols=1)
+       addStyle(wb,sheet="Search Criteria",style=wrap,rows=18,cols=1)
        setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
        
        #Map
