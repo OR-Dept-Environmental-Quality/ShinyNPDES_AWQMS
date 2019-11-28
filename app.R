@@ -107,7 +107,8 @@ tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
 
 #one-off characteristics of interest
 oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
-                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids"))
+                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
+                 "Chlorine, Total Residual"))
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -507,7 +508,6 @@ server <- function(input, output) {
             subset(rpa(),
                    subset= (!(Method_Code==c("624 (U.S. Environmental Protection Agency)") & Char_Name==c("1,2,4-Trichlorobenzene"))))%>%
             
-            #need to add code to figure out what to do with NDs and with <, then we can group by and summarise
             #directions on how to deal with NDs and < taken from RPA IMD Appendix C.
             #for calculating mean, ND=0, between DL and QL=DL
             mutate(Result_mean = case_when(Result=="ND" ~ 0,
@@ -571,7 +571,7 @@ server <- function(input, output) {
      dat2<-subset(dat2, is.na(dat2$Statistical_Base))
    
      #remove "dissolved alkalinity" samples- were only done in a few projects and are not the way we usually do alkalinity
-     dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved"))
+     dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved" & dat2$OrganizationID=='OREGONDEQ'))
      
      #have occasional issues with 2 pH values (one field, one lab) for ORDEQ data
      #remove Sample-Routine pH if ORDEQ data
