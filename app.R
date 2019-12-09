@@ -108,7 +108,7 @@ tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
 #one-off characteristics of interest
 oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
                  "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
-                 "Chlorine, Total Residual"))
+                 "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -531,7 +531,7 @@ server <- function(input, output) {
                       sd = round(sd(Result_mean, na.rm = T),2), max = as.character(max(Result_mean, na.rm = TRUE)), 
                       geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
             #for CV, if number of observations is less than 10 then CV=0.6, else calculate the CV
-            mutate(CV = ifelse(count_all>=10,round(sd/mean,2),0.6))
+            mutate(CV = ifelse(count_all>=10,round(sd(Result_mean, na.rm=TRUE)/mean(Result_mean, na.rm=TRUE),2),0.6))
          
          
          #add CAS#
