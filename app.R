@@ -511,7 +511,7 @@ server <- function(input, output) {
             #directions on how to deal with NDs and < taken from RPA IMD Appendix C.
             #for calculating mean, ND=0, between DL and QL=DL
             mutate(Result_mean = case_when(Result=="ND" ~ 0,
-                                           Result>MRLValue ~ as.numeric(Result),
+                                           as.numeric(Result)>=MRLValue ~ as.numeric(Result),
                                            "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
                                            "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
                                            )) %>%
@@ -519,19 +519,20 @@ server <- function(input, output) {
             #create column that uses result for caclulating the geo mean
             mutate(Result_geomean=case_when(Result=="ND" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
                                             Result=="ND" & is.na(MDLValue) ~ as.numeric(MRLValue)/2,
-                                            Result>MRLValue ~ as.numeric(Result),
+                                            as.numeric(Result)>=MRLValue ~ as.numeric(Result),
                                             "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
                                             "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
             )) %>%
             group_by(Char_Name)%>%
-            #mutate(cas = unique(rpa()$CASNumber))%>%
+   
             #do summary stats
             #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
-            summarise(count_all = n(), count_result = sum(Result!="ND"), mean = round(mean(Result_mean, na.rm = TRUE),2),
-                      sd = round(sd(Result_mean, na.rm = T),2), max = as.character(max(Result_mean, na.rm = TRUE)), 
+            summarise(count_all = n(), count_result = sum(Result!="ND"), average = round(mean(Result_mean, na.rm = TRUE),2),
+                      mn = mean(Result_mean, na.rm = TRUE),
+                      stdev = sd(Result_mean, na.rm = T), max = as.character(max(Result_mean, na.rm = TRUE)), 
                       geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
             #for CV, if number of observations is less than 10 then CV=0.6, else calculate the CV
-            mutate(CV = ifelse(count_all>=10,round(sd(Result_mean, na.rm=TRUE)/mean(Result_mean, na.rm=TRUE),2),0.6))
+            mutate(CV = ifelse(count_all>=10,round(stdev/mn,2),0.6))
          
          
          #add CAS#
@@ -539,7 +540,7 @@ server <- function(input, output) {
          RPAsum<-unique(left_join(RPAsum,cas, by="Char_Name"))
          
          #get into an order that can go right into the RPA spreadsheet
-         RPAsum<-subset(RPAsum,select=c(Char_Name,count_result,count_all,max,geomean,mean,CV,CASNumber))
+         RPAsum<-subset(RPAsum,select=c(Char_Name,count_result,count_all,max,geomean,average,CV,CASNumber))
    
         
       } 
