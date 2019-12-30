@@ -750,7 +750,11 @@ server <- function(input, output) {
             }
        #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
-                              writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
+                              writeData(wb,"CuBLM_Data_Format",startRow=1,x="Copper BLM data. Examine MLocID for sample location. Examine Result Type columns for data quality")
+                              writeData(wb,"CuBLM_Data_Format",startRow=2,x="Note that if both dissolved and total recoverable copper was collected, there will be two rows for each sampling event.")
+                              writeDataTable(wb,"CuBLM_Data_Format",startRow=4,x=copper(),tableStyle="none")
+                              
+                              }
        #Ammonia RPA                     
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
                            writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
