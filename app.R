@@ -751,8 +751,58 @@ server <- function(input, output) {
        #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeData(wb,"CuBLM_Data_Format",startRow=1,x="Copper BLM data. Examine MLocID for sample location. Examine Result Type columns for data quality")
-                              writeData(wb,"CuBLM_Data_Format",startRow=2,x="Note that if both dissolved and total recoverable copper was collected, there will be two rows for each sampling event.")
-                              writeDataTable(wb,"CuBLM_Data_Format",startRow=4,x=copper(),tableStyle="none")
+                              writeData(wb,"CuBLM_Data_Format",startRow=2,x="data has already been converted into proper units for Cu BLM analysis (ug/L for Copper, mg/L for all other concentrations, and degrees C for temperature). No unit conversion necessary")
+                              writeData(wb,"CuBLM_Data_Format",startRow=3,x="Note that if both dissolved and total recoverable copper was collected, there will be two rows for each sampling event.")
+                              writeData(wb,"CuBLM_Data_Format",startRow=4,x="Note that all metals are in dissolved fraction. If total recoverable data is needed in the absence of dissolved data, examine 'Data' worksheet")
+                                        
+                              #remove date column, overkill
+                              copper<-within(copper(),rm("date"))
+                              
+                              #make sure all columns are there for each parameter (add as NA if there is no data)
+                              copper<-if(!("Temperature, water" %in% colnames(copper))){add_column(copper, "Temperature, water"=NA)} else {copper}
+                              copper<-if(!("pH" %in% colnames(copper))){add_column(copper, "pH"=NA)} else {copper}
+                              copper<-if(!("Alkalinity, total" %in% colnames(copper))){add_column(copper, "Alkalinity, total"=NA)} else {copper}
+                              copper<-if(!("Calcium,Dissolved" %in% colnames(copper))){add_column(copper, "Calcium,Dissolved"=NA)} else {copper}
+                              copper<-if(!("Chloride" %in% colnames(copper))){add_column(copper, "Chloride"=NA)} else {copper}
+                              copper<-if(!("Magnesium,Dissolved" %in% colnames(copper))){add_column(copper, "Magnesium,Dissolved"=NA)} else {copper}
+                              copper<-if(!("Organic carbon,Dissolved" %in% colnames(copper))){add_column(copper, "Organic carbon,Dissolved"=NA)} else {copper}
+                              copper<-if(!("Potassium,Dissolved" %in% colnames(copper))){add_column(copper, "Potassium,Dissolved"=NA)} else {copper}
+                              copper<-if(!("Sodium,Dissolved" %in% colnames(copper))){add_column(copper, "Sodium,Dissolved"=NA)} else {copper}
+                              copper<-if(!("Sulfate" %in% colnames(copper))){add_column(copper, "Sulfate"=NA)} else {copper}
+                              copper<-if(!("Sulfide" %in% colnames(copper))){add_column(copper, "Sulfide"=NA)} else {copper}
+                              #note that there is no humic acid paramter in AWQMS, nor is it asked for from the permittees, adding the column
+                              #as a placeholder since the HA column is in the permitting Copper BLM calculation tool
+                              copper<-if(!("Humic Acid" %in% colnames(copper))){add_column(copper, "Humic Acid"=NA)} else {copper}
+                              
+                              #Same for result type
+                              copper<-if(!("Temperature, water Result_Type" %in% colnames(copper))){add_column(copper, "Temperature, water Result_Type"=NA)} else {copper}
+                              copper<-if(!("pH Result_Type" %in% colnames(copper))){add_column(copper, "pH Result_Type"=NA)} else {copper}
+                              copper<-if(!("Alkalinity, total Result_Type" %in% colnames(copper))){add_column(copper, "Alkalinity, total Result_Type"=NA)} else {copper}
+                              copper<-if(!("Calcium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Calcium,Dissolved Result_Type"=NA)} else {copper}
+                              copper<-if(!("Chloride Result_Type" %in% colnames(copper))){add_column(copper, "Chloride Result_Type"=NA)} else {copper}
+                              copper<-if(!("Magnesium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Magnesium,Dissolved Result_Type"=NA)} else {copper}
+                              copper<-if(!("Organic carbon,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Organic carbon,Dissolved Result_Type"=NA)} else {copper}
+                              copper<-if(!("Potassium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Potassium,Dissolved Result_Type"=NA)} else {copper}
+                              copper<-if(!("Sodium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Sodium,Dissolved Result_Type"=NA)} else {copper}
+                              copper<-if(!("Sulfate Result_Type" %in% colnames(copper))){add_column(copper, "Sulfate Result_Type"=NA)} else {copper}
+                              copper<-if(!("Sulfide Result_Type" %in% colnames(copper))){add_column(copper, "Sulfide Result_Type"=NA)} else {copper}
+                              #note that there is no humic acid paramter in AWQMS, nor is it asked for from the permittees, adding the column
+                              #as a placeholder since the HA column is in the permitting Copper BLM calculation tool
+                              copper<-if(!("Humic Acid Result_Type" %in% colnames(copper))){add_column(copper, "Humic Acid Result_Type"=NA)} else {copper}
+                              
+                              #reorder columns for easy copy/paste into Cu BLM tool
+                              copper<-subset(copper,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result",
+                                                "MDLValue","MRLValue","Result_Type","Temperature, water","pH","Organic carbon,Dissolved","Humic Acid",
+                                                "Calcium,Dissolved","Magnesium,Dissolved","Sodium,Dissolved","Potassium,Dissolved","Sulfate","Chloride",
+                                                "Alkalinity, total","Sulfide","Temperature, water Result_Type","pH Result_Type","Organic carbon,Dissolved Result_Type",
+                                                "Humic Acid Result_Type","Calcium,Dissolved Result_Type","Magnesium,Dissolved Result_Type",
+                                                "Sodium,Dissolved Result_Type","Potassium,Dissolved Result_Type","Sulfate Result_Type","Chloride Result_Type",
+                                                "Alkalinity, total Result_Type","Sulfide Result_Type"))
+                              
+                              #need to reformat the columns so that they come through as numbers
+                              
+                              
+                              writeDataTable(wb,"CuBLM_Data_Format",startRow=6,x=copper,tableStyle="none")
                               
                               }
        #Ammonia RPA                     
@@ -774,7 +824,7 @@ server <- function(input, output) {
               writeData(wb,"pH_RPA",x=names(pHrpa[i]),startRow=1,startCol=num+2)
               addStyle(wb,"pH_RPA",style=bold,rows=1,cols=1:1000)
               
-              #make sure all column are there for each parameter (add as NA since there is no data)
+              #make sure all columns are there for each parameter (add as NA if there is no data)
               pHrpa[[i]]<-if(!("Temperature, water" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Temperature, water"=NA)} else {pHrpa[[i]]}
               pHrpa[[i]]<-if(!("pH" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "pH"=NA)} else {pHrpa[[i]]}
               pHrpa[[i]]<-if(!("Alkalinity, total" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Alkalinity, total"=NA)} else {pHrpa[[i]]}
