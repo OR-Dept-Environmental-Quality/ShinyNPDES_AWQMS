@@ -752,22 +752,26 @@ server <- function(input, output) {
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeData(wb,"CuBLM_Data_Format",startRow=1,x="Copper BLM data. Examine MLocID for sample location. Examine Result Type columns for data quality")
                               writeData(wb,"CuBLM_Data_Format",startRow=2,x="data has already been converted into proper units for Cu BLM analysis (ug/L for Copper, mg/L for all other concentrations, and degrees C for temperature). No unit conversion necessary")
-                              writeData(wb,"CuBLM_Data_Format",startRow=3,x="Note that if both dissolved and total recoverable copper was collected, there will be two rows for each sampling event.")
-                              writeData(wb,"CuBLM_Data_Format",startRow=4,x="Note that all metals are in dissolved fraction. If total recoverable data is needed in the absence of dissolved data, examine 'Data' worksheet")
+                              writeData(wb,"CuBLM_Data_Format",startRow=3,x="Note that if both dissolved and total recoverable copper were collected, there will be two rows for each sampling event.")
+                              writeData(wb,"CuBLM_Data_Format",startRow=4,x="For Calcium, Magnesium, Potassium, and Sodium: The worksheet selected the dissolved fraction of the analyte if available. If the dissolved fraction was not available, then the total recoverable fraciton is used below. Check 'Data' worksheet for analyte fraction.")
                                         
                               #remove date column, overkill
                               copper<-within(copper(),rm("date"))
                               
+                              #fix names to remove spaces and commas
+                              names(copper)<-str_replace_all(names(copper), c(" " = "." , "," = "" ))
+                              
+                              
                               #make sure all columns are there for each parameter (add as NA if there is no data)
-                              copper<-if(!("Temperature, water" %in% colnames(copper))){add_column(copper, "Temperature, water"=NA)} else {copper}
+                              copper<-if(!("Temperature.water" %in% colnames(copper))){add_column(copper, "Temperature.water"=NA)} else {copper}
                               copper<-if(!("pH" %in% colnames(copper))){add_column(copper, "pH"=NA)} else {copper}
-                              copper<-if(!("Alkalinity, total" %in% colnames(copper))){add_column(copper, "Alkalinity, total"=NA)} else {copper}
-                              copper<-if(!("Calcium,Dissolved" %in% colnames(copper))){add_column(copper, "Calcium,Dissolved"=NA)} else {copper}
+                              copper<-if(!("Alkalinity.total" %in% colnames(copper))){add_column(copper, "Alkalinity.total"=NA)} else {copper}
+                              copper<-if(!("CalciumDissolved" %in% colnames(copper))){add_column(copper, "CalciumDissolved"=NA)} else {copper}
                               copper<-if(!("Chloride" %in% colnames(copper))){add_column(copper, "Chloride"=NA)} else {copper}
-                              copper<-if(!("Magnesium,Dissolved" %in% colnames(copper))){add_column(copper, "Magnesium,Dissolved"=NA)} else {copper}
-                              copper<-if(!("Organic carbon,Dissolved" %in% colnames(copper))){add_column(copper, "Organic carbon,Dissolved"=NA)} else {copper}
-                              copper<-if(!("Potassium,Dissolved" %in% colnames(copper))){add_column(copper, "Potassium,Dissolved"=NA)} else {copper}
-                              copper<-if(!("Sodium,Dissolved" %in% colnames(copper))){add_column(copper, "Sodium,Dissolved"=NA)} else {copper}
+                              copper<-if(!("MagnesiumDissolved" %in% colnames(copper))){add_column(copper, "MagnesiumDissolved"=NA)} else {copper}
+                              copper<-if(!("Organic.carbonDissolved" %in% colnames(copper))){add_column(copper, "Organic.carbonDissolved"=NA)} else {copper}
+                              copper<-if(!("PotassiumDissolved" %in% colnames(copper))){add_column(copper, "PotassiumDissolved"=NA)} else {copper}
+                              copper<-if(!("SodiumDissolved" %in% colnames(copper))){add_column(copper, "SodiumDissolved"=NA)} else {copper}
                               copper<-if(!("Sulfate" %in% colnames(copper))){add_column(copper, "Sulfate"=NA)} else {copper}
                               copper<-if(!("Sulfide" %in% colnames(copper))){add_column(copper, "Sulfide"=NA)} else {copper}
                               #note that there is no humic acid paramter in AWQMS, nor is it asked for from the permittees, adding the column
@@ -775,29 +779,73 @@ server <- function(input, output) {
                               copper<-if(!("Humic Acid" %in% colnames(copper))){add_column(copper, "Humic Acid"=NA)} else {copper}
                               
                               #Same for result type
-                              copper<-if(!("Temperature, water Result_Type" %in% colnames(copper))){add_column(copper, "Temperature, water Result_Type"=NA)} else {copper}
-                              copper<-if(!("pH Result_Type" %in% colnames(copper))){add_column(copper, "pH Result_Type"=NA)} else {copper}
-                              copper<-if(!("Alkalinity, total Result_Type" %in% colnames(copper))){add_column(copper, "Alkalinity, total Result_Type"=NA)} else {copper}
-                              copper<-if(!("Calcium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Calcium,Dissolved Result_Type"=NA)} else {copper}
-                              copper<-if(!("Chloride Result_Type" %in% colnames(copper))){add_column(copper, "Chloride Result_Type"=NA)} else {copper}
-                              copper<-if(!("Magnesium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Magnesium,Dissolved Result_Type"=NA)} else {copper}
-                              copper<-if(!("Organic carbon,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Organic carbon,Dissolved Result_Type"=NA)} else {copper}
-                              copper<-if(!("Potassium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Potassium,Dissolved Result_Type"=NA)} else {copper}
-                              copper<-if(!("Sodium,Dissolved Result_Type" %in% colnames(copper))){add_column(copper, "Sodium,Dissolved Result_Type"=NA)} else {copper}
-                              copper<-if(!("Sulfate Result_Type" %in% colnames(copper))){add_column(copper, "Sulfate Result_Type"=NA)} else {copper}
-                              copper<-if(!("Sulfide Result_Type" %in% colnames(copper))){add_column(copper, "Sulfide Result_Type"=NA)} else {copper}
+                              copper<-if(!("Temperature.water.Result_Type" %in% colnames(copper))){add_column(copper, "Temperature.water.Result_Type"=NA)} else {copper}
+                              copper<-if(!("pH.Result_Type" %in% colnames(copper))){add_column(copper, "pH.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Alkalinity.total.Result_Type" %in% colnames(copper))){add_column(copper, "Alkalinity.total.Result_Type"=NA)} else {copper}
+                              copper<-if(!("CalciumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "CalciumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Chloride.Result_Type" %in% colnames(copper))){add_column(copper, "Chloride.Result_Type"=NA)} else {copper}
+                              copper<-if(!("MagnesiumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "MagnesiumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Organic.carbonDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "Organic.carbonDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("PotassiumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "PotassiumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("SodiumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "SodiumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Sulfate.Result_Type" %in% colnames(copper))){add_column(copper, "Sulfate.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Sulfide.Result_Type" %in% colnames(copper))){add_column(copper, "Sulfide.Result_Type"=NA)} else {copper}
                               #note that there is no humic acid paramter in AWQMS, nor is it asked for from the permittees, adding the column
                               #as a placeholder since the HA column is in the permitting Copper BLM calculation tool
                               copper<-if(!("Humic Acid Result_Type" %in% colnames(copper))){add_column(copper, "Humic Acid Result_Type"=NA)} else {copper}
                               
+                              #want to select dissolved metal if available, substitute total recoverable if that was all that was analyzed
+                              copper$Magnesium<-ifelse(!(is.na(copper$MagnesiumDissolved)),
+                                                       copper$MagnesiumDissolved,
+                                                       ifelse(!(is.na(copper$MagnesiumTotal.Recoverable)),
+                                                          copper$MagnesiumTotal.Recoverable,
+                                                          NA))
+                              copper$Magnesium.Result_Type<-ifelse(!(is.na(copper$MagnesiumDissolved.Result_Type)),
+                                                                   copper$MagnesiumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$MagnesiumTotal.Recoverable.Result_Type)),
+                                                                          copper$MagnesiumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                              
+                              copper$Calcium<-ifelse(!(is.na(copper$CalciumDissolved)),
+                                                       copper$CalciumDissolved,
+                                                       ifelse(!(is.na(copper$CalciumTotal.Recoverable)),
+                                                              copper$CalciumTotal.Recoverable,
+                                                              NA))
+                              copper$Calcium.Result_Type<-ifelse(!(is.na(copper$CalciumDissolved.Result_Type)),
+                                                                   copper$CalciumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$CalciumTotal.Recoverable.Result_Type)),
+                                                                          copper$CalciumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                              copper$Sodium<-ifelse(!(is.na(copper$SodiumDissolved)),
+                                                       copper$SodiumDissolved,
+                                                       ifelse(!(is.na(copper$SodiumTotal.Recoverable)),
+                                                              copper$SodiumTotal.Recoverable,
+                                                              NA))
+                              copper$Sodium.Result_Type<-ifelse(!(is.na(copper$MagnesiumDissolved.Result_Type)),
+                                                                   copper$MagnesiumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$MagnesiumTotal.Recoverable.Result_Type)),
+                                                                          copper$MagnesiumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                              copper$Potassium<-ifelse(!(is.na(copper$PotassiumDissolved)),
+                                                       copper$PotassiumDissolved,
+                                                       ifelse(!(is.na(copper$PotassiumTotal.Recoverable)),
+                                                              copper$PotassiumTotal.Recoverable,
+                                                              NA))
+                              copper$Potassium.Result_Type<-ifelse(!(is.na(copper$PotassiumDissolved.Result_Type)),
+                                                                   copper$PotassiumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$PotassiumTotal.Recoverable.Result_Type)),
+                                                                          copper$PotassiumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                                                          
+                              
                               #reorder columns for easy copy/paste into Cu BLM tool
                               copper<-subset(copper,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result",
-                                                "MDLValue","MRLValue","Result_Type","Temperature, water","pH","Organic carbon,Dissolved","Humic Acid",
-                                                "Calcium,Dissolved","Magnesium,Dissolved","Sodium,Dissolved","Potassium,Dissolved","Sulfate","Chloride",
-                                                "Alkalinity, total","Sulfide","Temperature, water Result_Type","pH Result_Type","Organic carbon,Dissolved Result_Type",
-                                                "Humic Acid Result_Type","Calcium,Dissolved Result_Type","Magnesium,Dissolved Result_Type",
-                                                "Sodium,Dissolved Result_Type","Potassium,Dissolved Result_Type","Sulfate Result_Type","Chloride Result_Type",
-                                                "Alkalinity, total Result_Type","Sulfide Result_Type"))
+                                                "MDLValue","MRLValue","Result_Type","Temperature.water","pH","Organic.carbonDissolved","Humic Acid",
+                                                "Calcium","Magnesium","Sodium","Potassium","Sulfate","Chloride",
+                                                "Alkalinity.total","Sulfide","Temperature.water.Result_Type","pH.Result_Type","Organic.carbonDissolved.Result_Type",
+                                                "Humic Acid Result_Type","Calcium.Result_Type","Magnesium.Result_Type",
+                                                "Sodium.Result_Type","Potassium.Result_Type","Sulfate.Result_Type","Chloride.Result_Type",
+                                                "Alkalinity.total.Result_Type","Sulfide.Result_Type"))
                               
                               #need to reformat the columns so that they come through as numbers
                               
