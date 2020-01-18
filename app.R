@@ -469,6 +469,12 @@ server <- function(input, output) {
                            paste0("7440382I"),
                            rpa$CASNumber)
      
+     #harndess, add 'Hardness' to CAS so RPA tool has something to work with
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Total hardness","Hardness, Ca, Mg",
+                                                "Hardness, carbonate","Hardness, non-carbonate"),
+                           paste0("HARDNESS"),
+                           rpa$CASNumber)
+     
      #combine Char_Name and Sample_Fraction for just metals
      rpa<-namefrac(rpa)
     
