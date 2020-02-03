@@ -6,11 +6,11 @@
 #'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
 #'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
 #'River/Stream Perennial', 'BEACH Program Site-Estuary'
-# in additon, the query is set up so that when Reject=False (default), no rejected data will be returned
+# in additon, the query is set up so that no rejected data is returned
 
 NPDES_AWQMS_Qry<-function 
 (startdate = "2000-01-01", enddate = NULL, station = NULL, project=NULL, montype = NULL, char = NULL, org = NULL, 
- HUC8 = NULL, HUC8_Name = NULL, AU_ID= NULL, reject=FALSE) 
+ HUC8 = NULL, HUC8_Name = NULL, AU_ID= NULL) 
 {
   if (missing(startdate)) {
     stop("Need to input startdate")
@@ -49,8 +49,6 @@ NPDES_AWQMS_Qry<-function
   if (length(AU_ID) > 0) {
     query = paste0(query, "\n AND AU_ID in ({AU_ID*}) ")
   }
-  if (reject==FALSE) {query=paste0(query,"\n AND Result_status NOT LIKE 'Rejected'")}
-  query=paste0(query,"\n AND SampleMedia in ('Water')")
   if (length(montype)>0){
     query=paste0(query,"\n AND MonLocType in ({montype*})")
   } 
@@ -60,7 +58,7 @@ NPDES_AWQMS_Qry<-function
                'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
                'River/Stream Perennial','Facility Public Water Supply (PWS)')")
     }
-  query=paste0(query,"\n AND MLocID <> '10000-ORDEQ'\n                   \n AND activity_type NOT LIKE 'Quality Control%'")
+  query=paste0(query,"\n AND SampleMedia in ('Water') AND MLocID <> '10000-ORDEQ' AND activity_type NOT LIKE 'Quality Control%' AND Result_status NOT LIKE 'Rejected'")
   
   con <- DBI::dbConnect(odbc::odbc(), "AWQMS")
   qry <- glue::glue_sql(query, .con = con)
