@@ -107,7 +107,9 @@ tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
 
 #one-off characteristics of interest
 oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
-                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese"))
+                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
+                 "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
+
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -118,6 +120,8 @@ if(!file.exists("query_cache.RData") |
 #NPDES_AWQMS_Stations functions only pulls stations of interest to NPDES program
 station <- NPDES_AWQMS_Stations()
 Mtype<-station$MonLocType
+auid<-station$AU_ID
+auid<-sort(station$AU_ID)
 station <- station$MLocID
 station <- sort(station)
 
@@ -125,8 +129,10 @@ organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- sort(organization)
 
+
+
 #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
-save(station, Mtype, organization, file = 'query_cache.RData')
+save(station, Mtype, auid, organization, file = 'query_cache.RData')
 } else {
   load("query_cache.RData")
 }
@@ -203,13 +209,19 @@ ui <- fluidPage(
                        multiple=TRUE),
        
        #add warning
-       tags$em("Warning: HUC8 may not include all stations"),
+       tags$em("Warning: HUC8 may not include all stations on coast"),
        
        # huc8 names 
        selectizeInput("huc8_nms",
                        "Select HUC 8",
                        choices = HUC8_Names,
                        multiple = TRUE),
+       
+       #AU_IDs
+       selectizeInput("AUID",
+                      "Select Assessment Unit",
+                      choices = auid,
+                      multiple = TRUE),
     
        #Orgs
        selectizeInput("orgs",
@@ -271,7 +283,10 @@ ui <- fluidPage(
         tabPanel("Table",
                  dataTableOutput("table")),
         #add leaflet map
-        tabPanel("Map",leafletOutput("locs"))
+        tabPanel("Map",leafletOutput("locs")),
+        #check diagnositcs
+        tabPanel("RPA Summary",
+                 dataTableOutput("RPAsum"))
         )
    )
 ),
@@ -312,7 +327,7 @@ server <- function(input, output) {
    
    #actual query for data
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
-                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms),reject=rrej)
+                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID),reject=rrej)
    
    
    #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
@@ -407,7 +422,9 @@ server <- function(input, output) {
    
    #take data, make subtable just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
-     #remove temperature, DO, pH and other non-toxics RPA characteristics
+     
+     #only keep characteristics that are in the tox character list
+
      rpa<-subset(data(),(Char_Name %in% tox))
     
      if (nrow(rpa)!=0){
@@ -455,6 +472,12 @@ server <- function(input, output) {
                            paste0("7440382I"),
                            rpa$CASNumber)
      
+     #harndess, add 'Hardness' to CAS so RPA tool has something to work with
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Total hardness","Hardness, Ca, Mg",
+                                                "Hardness, carbonate","Hardness, non-carbonate"),
+                           paste0("HARDNESS"),
+                           rpa$CASNumber)
+     
      #combine Char_Name and Sample_Fraction for just metals
      rpa<-namefrac(rpa)
     
@@ -469,12 +492,13 @@ server <- function(input, output) {
                         rpa$Result)
      
      #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
+     #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
+     #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
      #only take certain rows, change order so that it is more in line with RPA
-     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | rpa$Result_Numeric<=rpa$MRLValue,
+     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue),
                  select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,Result_Type,MLocID,MonLocType,Result_Comment))
-     
 
      
      #need to remove dashes from CASNumber row
@@ -484,6 +508,61 @@ server <- function(input, output) {
      
    })
    
+   #RPA summary, this is to help replace the summary stats page in the RPA spreadsheet
+   RPAsum<-eventReactive(input$goButton, {
+      if (nrow(rpa())!=0){
+         RPAsum<-#rpa()%>%
+            #1,2,4-Trichlorobenzene gets counted twice since it is run as both as part of the volatile and semivolatile suite...
+            #for NPDES purposes, only the semi-volatile analyses count, so remove anything done by 624 or 624.1
+            subset(rpa(),
+                   subset= (!(Method_Code==c("624 (U.S. Environmental Protection Agency)") & Char_Name==c("1,2,4-Trichlorobenzene"))))%>%
+            
+            #directions on how to deal with NDs and < taken from RPA IMD Appendix C.
+            #for calculating mean, ND=0, between DL and QL=DL
+            mutate(Result_mean = case_when(Result=="ND" ~ 0,
+                                           as.numeric(Result)>=MRLValue ~ as.numeric(Result),
+                                           "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                           "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
+                                           )) %>%
+            #for calculating geo mean, ND=1/2DL, but need to be careful for carcinogens- sometimes 1/2 DL is near the  WQ criterion, which can lead to RP when we don't actually know
+            #create column that uses result for caclulating the geo mean
+            mutate(Result_geomean=case_when(Result=="ND" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
+                                            Result=="ND" & is.na(MDLValue) ~ as.numeric(MRLValue)/2,
+                                            as.numeric(Result)>=MRLValue ~ as.numeric(Result),
+                                            "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                            "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
+            )) %>%
+            group_by(Char_Name)%>%
+   
+            #do summary stats
+            #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
+            summarise(count_all = n(), count_result = sum(Result!="ND"), average = round(mean(Result_mean, na.rm = TRUE),2),
+                      mn = mean(Result_mean, na.rm = TRUE),
+                      stdev = sd(Result_mean, na.rm = T), max = as.character(max(Result_mean, na.rm = TRUE)), 
+                      geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
+            #for CV, if number of observations is less than 10 then CV=0.6, else calculate the CV
+            mutate(CV = ifelse(count_all>=10,round(stdev/mn,2),0.6))
+         
+         
+         #add CAS#
+         cas<-subset(rpa(),select=c(unique(Char_Name),unique(CASNumber)))
+         RPAsum<-unique(left_join(RPAsum,cas, by="Char_Name"))
+         
+         #get into an order that can go right into the RPA spreadsheet
+         RPAsum<-subset(RPAsum,select=c(Char_Name,count_result,count_all,max,geomean,average,CV,CASNumber))
+   
+        
+      } 
+      #need to add else statement or the RPAsum dataframe is not created at all and then the data download breaks
+      else {RPAsum<-data.frame()}
+      RPAsum
+   })
+   
+   #table of queried data for Shiny app view  
+   output$RPAsum<-renderDataTable({
+      
+      RPAsum()
+   })
    #ammonia RPA output, similar to Copper BLM output
    amm<-eventReactive(input$goButton,{
      
@@ -502,7 +581,7 @@ server <- function(input, output) {
      dat2<-subset(dat2, is.na(dat2$Statistical_Base))
    
      #remove "dissolved alkalinity" samples- were only done in a few projects and are not the way we usually do alkalinity
-     dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved"))
+     dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved" & dat2$OrganizationID=='OREGONDEQ'))
      
      #have occasional issues with 2 pH values (one field, one lab) for ORDEQ data
      #remove Sample-Routine pH if ORDEQ data
@@ -542,6 +621,7 @@ server <- function(input, output) {
      charc<- paste0("RPA Group = ",toString(sprintf("'%s'", input$characteristics)))
      onof<- paste0("Characteristics = ",toString(sprintf("'%s'", input$oneoff)))
      huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
+     auids<-paste0("Assessment Unit = ",toString(sprintf("'%s'",input$AUID)))
      organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
      allchar<- paste0("List of all potential RPA characteristics (All Toxics includes Pesticides/PCB RPA, Base Neutral RPA, Acid Extractable RPA, VOC RPA, and Metals RPA) \n",
                       "pH RPA: ",toString(phrpa), "\n\n",
@@ -600,11 +680,12 @@ server <- function(input, output) {
        writeData(wb,sheet="Search Criteria",x=charc,startCol=1,startRow=11)
        writeData(wb,sheet="Search Criteria",x=onof,startCol=1,startRow=12)
        writeData(wb,sheet="Search Criteria",x=huc8s,startCol=1,startRow=13)
-       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=14)
-       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=15)
-       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=16)
+       writeData(wb,sheet="Search Criteria",x=auids,startCol=1,startRow=14)
+       writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=15)
+       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=16)
+       writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=18)
        
-       addStyle(wb,sheet="Search Criteria",style=wrap,rows=16,cols=1)
+       addStyle(wb,sheet="Search Criteria",style=wrap,rows=18,cols=1)
        setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
        
        #Map
@@ -648,6 +729,8 @@ server <- function(input, output) {
             #replace all NAs with 0
             tots[is.na(tots)]<-0
             
+            
+            
             writeDataTable(wb,"Diagnostics",x=tots,tableStyle="none",startRow=3,startCol=1)
             writeData(wb,"Diagnostics",startRow=1,startCol=1,x="Estimated Result Count column contains ALL estimated results, including those that are between MDL and MRL (QL and DL)")
             setColWidths(wb,"Diagnostics",cols=1:5,widths=20)
@@ -669,9 +752,116 @@ server <- function(input, output) {
                            shaderot<-createStyle(fgFill="yellow2",textRotation = 45)
                            addStyle(wb,"Toxics_Data_Format",style=shaderot,cols=1:15,rows=4)
                                                           }
+       
+       #RPA summary stats
+       if (nrow(RPAsum())!=0) {addWorksheet(wb,"Toxics_SummaryStats")
+               writeDataTable(wb,"Toxics_SummaryStats",startRow=2,x=RPAsum(),tableStyle="none")
+            }
        #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
-                              writeDataTable(wb,"CuBLM_Data_Format",x=copper(),tableStyle="none")}
+                              writeData(wb,"CuBLM_Data_Format",startRow=1,x="Copper BLM data. Examine MLocID for sample location. Examine Result Type columns for data quality")
+                              writeData(wb,"CuBLM_Data_Format",startRow=2,x="data has already been converted into proper units for Cu BLM analysis (ug/L for Copper, mg/L for all other concentrations, and degrees C for temperature). No unit conversion necessary")
+                              writeData(wb,"CuBLM_Data_Format",startRow=3,x="Note that if both dissolved and total recoverable copper were collected, there will be two rows for each sampling event.")
+                              writeData(wb,"CuBLM_Data_Format",startRow=4,x="For Calcium, Magnesium, Potassium, and Sodium: The worksheet selected the dissolved fraction of the analyte if available. If the dissolved fraction was not available, then the total recoverable fraciton is used below. Check 'Data' worksheet for analyte fraction.")
+                                        
+                              #remove date column, overkill
+                              copper<-within(copper(),rm("date"))
+                              
+                              #fix names to remove spaces and commas
+                              names(copper)<-str_replace_all(names(copper), c(" " = "." , "," = "" ))
+                              
+                              
+                              #make sure all columns are there for each parameter (add as NA if there is no data)
+                              copper<-if(!("Temperature.water" %in% colnames(copper))){add_column(copper, "Temperature.water"=NA)} else {copper}
+                              copper<-if(!("pH" %in% colnames(copper))){add_column(copper, "pH"=NA)} else {copper}
+                              copper<-if(!("Alkalinity.total" %in% colnames(copper))){add_column(copper, "Alkalinity.total"=NA)} else {copper}
+                              copper<-if(!("CalciumDissolved" %in% colnames(copper))){add_column(copper, "CalciumDissolved"=NA)} else {copper}
+                              copper<-if(!("Chloride" %in% colnames(copper))){add_column(copper, "Chloride"=NA)} else {copper}
+                              copper<-if(!("MagnesiumDissolved" %in% colnames(copper))){add_column(copper, "MagnesiumDissolved"=NA)} else {copper}
+                              copper<-if(!("Organic.carbonDissolved" %in% colnames(copper))){add_column(copper, "Organic.carbonDissolved"=NA)} else {copper}
+                              copper<-if(!("PotassiumDissolved" %in% colnames(copper))){add_column(copper, "PotassiumDissolved"=NA)} else {copper}
+                              copper<-if(!("SodiumDissolved" %in% colnames(copper))){add_column(copper, "SodiumDissolved"=NA)} else {copper}
+                              copper<-if(!("Sulfate" %in% colnames(copper))){add_column(copper, "Sulfate"=NA)} else {copper}
+                              copper<-if(!("Sulfide" %in% colnames(copper))){add_column(copper, "Sulfide"=NA)} else {copper}
+                              #note that there is no humic acid paramter in AWQMS, nor is it asked for from the permittees, adding the column
+                              #as a placeholder since the HA column is in the permitting Copper BLM calculation tool
+                              copper<-if(!("Humic Acid" %in% colnames(copper))){add_column(copper, "Humic Acid"=NA)} else {copper}
+                              
+                              #Same for result type
+                              copper<-if(!("Temperature.water.Result_Type" %in% colnames(copper))){add_column(copper, "Temperature.water.Result_Type"=NA)} else {copper}
+                              copper<-if(!("pH.Result_Type" %in% colnames(copper))){add_column(copper, "pH.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Alkalinity.total.Result_Type" %in% colnames(copper))){add_column(copper, "Alkalinity.total.Result_Type"=NA)} else {copper}
+                              copper<-if(!("CalciumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "CalciumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Chloride.Result_Type" %in% colnames(copper))){add_column(copper, "Chloride.Result_Type"=NA)} else {copper}
+                              copper<-if(!("MagnesiumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "MagnesiumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Organic.carbonDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "Organic.carbonDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("PotassiumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "PotassiumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("SodiumDissolved.Result_Type" %in% colnames(copper))){add_column(copper, "SodiumDissolved.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Sulfate.Result_Type" %in% colnames(copper))){add_column(copper, "Sulfate.Result_Type"=NA)} else {copper}
+                              copper<-if(!("Sulfide.Result_Type" %in% colnames(copper))){add_column(copper, "Sulfide.Result_Type"=NA)} else {copper}
+                              #note that there is no humic acid paramter in AWQMS, nor is it asked for from the permittees, adding the column
+                              #as a placeholder since the HA column is in the permitting Copper BLM calculation tool
+                              copper<-if(!("Humic Acid Result_Type" %in% colnames(copper))){add_column(copper, "Humic Acid Result_Type"=NA)} else {copper}
+                              
+                              #want to select dissolved metal if available, substitute total recoverable if that was all that was analyzed
+                              copper$Magnesium<-ifelse(!(is.na(copper$MagnesiumDissolved)),
+                                                       copper$MagnesiumDissolved,
+                                                       ifelse(!(is.na(copper$MagnesiumTotal.Recoverable)),
+                                                          copper$MagnesiumTotal.Recoverable,
+                                                          NA))
+                              copper$Magnesium.Result_Type<-ifelse(!(is.na(copper$MagnesiumDissolved.Result_Type)),
+                                                                   copper$MagnesiumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$MagnesiumTotal.Recoverable.Result_Type)),
+                                                                          copper$MagnesiumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                              
+                              copper$Calcium<-ifelse(!(is.na(copper$CalciumDissolved)),
+                                                       copper$CalciumDissolved,
+                                                       ifelse(!(is.na(copper$CalciumTotal.Recoverable)),
+                                                              copper$CalciumTotal.Recoverable,
+                                                              NA))
+                              copper$Calcium.Result_Type<-ifelse(!(is.na(copper$CalciumDissolved.Result_Type)),
+                                                                   copper$CalciumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$CalciumTotal.Recoverable.Result_Type)),
+                                                                          copper$CalciumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                              copper$Sodium<-ifelse(!(is.na(copper$SodiumDissolved)),
+                                                       copper$SodiumDissolved,
+                                                       ifelse(!(is.na(copper$SodiumTotal.Recoverable)),
+                                                              copper$SodiumTotal.Recoverable,
+                                                              NA))
+                              copper$Sodium.Result_Type<-ifelse(!(is.na(copper$MagnesiumDissolved.Result_Type)),
+                                                                   copper$MagnesiumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$MagnesiumTotal.Recoverable.Result_Type)),
+                                                                          copper$MagnesiumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                              copper$Potassium<-ifelse(!(is.na(copper$PotassiumDissolved)),
+                                                       copper$PotassiumDissolved,
+                                                       ifelse(!(is.na(copper$PotassiumTotal.Recoverable)),
+                                                              copper$PotassiumTotal.Recoverable,
+                                                              NA))
+                              copper$Potassium.Result_Type<-ifelse(!(is.na(copper$PotassiumDissolved.Result_Type)),
+                                                                   copper$PotassiumDissolved.Result_Type,
+                                                                   ifelse(!(is.na(copper$PotassiumTotal.Recoverable.Result_Type)),
+                                                                          copper$PotassiumTotal.Recoverable.Result_Type,
+                                                                          NA))
+                                                          
+                              
+                              #reorder columns for easy copy/paste into Cu BLM tool
+                              copper<-subset(copper,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result",
+                                                "MDLValue","MRLValue","Result_Type","Temperature.water","pH","Organic.carbonDissolved","Humic Acid",
+                                                "Calcium","Magnesium","Sodium","Potassium","Sulfate","Chloride",
+                                                "Alkalinity.total","Sulfide","Temperature.water.Result_Type","pH.Result_Type","Organic.carbonDissolved.Result_Type",
+                                                "Humic Acid Result_Type","Calcium.Result_Type","Magnesium.Result_Type",
+                                                "Sodium.Result_Type","Potassium.Result_Type","Sulfate.Result_Type","Chloride.Result_Type",
+                                                "Alkalinity.total.Result_Type","Sulfide.Result_Type"))
+                              
+                              #need to reformat the columns so that they come through as numbers
+                              
+                              
+                              writeDataTable(wb,"CuBLM_Data_Format",startRow=6,x=copper,tableStyle="none")
+                              
+                              }
        #Ammonia RPA                     
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
                            writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
@@ -691,7 +881,7 @@ server <- function(input, output) {
               writeData(wb,"pH_RPA",x=names(pHrpa[i]),startRow=1,startCol=num+2)
               addStyle(wb,"pH_RPA",style=bold,rows=1,cols=1:1000)
               
-              #make sure all column are there for each parameter (add as NA since there is no data)
+              #make sure all columns are there for each parameter (add as NA if there is no data)
               pHrpa[[i]]<-if(!("Temperature, water" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Temperature, water"=NA)} else {pHrpa[[i]]}
               pHrpa[[i]]<-if(!("pH" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "pH"=NA)} else {pHrpa[[i]]}
               pHrpa[[i]]<-if(!("Alkalinity, total" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Alkalinity, total"=NA)} else {pHrpa[[i]]}

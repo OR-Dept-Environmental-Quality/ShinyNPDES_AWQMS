@@ -9,15 +9,15 @@
 # in additon, the query is set up so that when Reject=False (default), no rejected data will be returned
 
 NPDES_AWQMS_Qry<-function 
-(startdate = "2000-01-01", enddate = NULL, station = NULL, montype = NULL, char = NULL, org = NULL, 
- HUC8 = NULL, HUC8_Name = NULL,reject=FALSE) 
+(startdate = "2000-01-01", enddate = NULL, station = NULL, project=NULL, montype = NULL, char = NULL, org = NULL, 
+ HUC8 = NULL, HUC8_Name = NULL, AU_ID= NULL, reject=FALSE) 
 {
   if (missing(startdate)) {
     stop("Need to input startdate")
   }
   
   query <- "SELECT OrganizationID,Org_Name,Project1,StationDes, MLocID,Lat_DD,Long_DD,MonLocType,
-  HUC8_Name,act_id,SampleStartDate,SampleStartTime,SampleMedia,
+  HUC8_Name,AU_ID,act_id,SampleStartDate,SampleStartTime,SampleMedia,
   SampleSubmedia,SamplingMethod,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
   Sample_Fraction,CASNumber,Result,Result_Numeric,Result_Operator,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
   MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,Activity_Comment,Result_Comment,Result_status,Result_Type,Result_UID\n  
@@ -32,6 +32,11 @@ NPDES_AWQMS_Qry<-function
   if (length(char) > 0) {
     query = paste0(query, "\n AND Char_Name in ({char*}) ")
   }
+  
+  if (length(project) > 0) {
+    query = paste0(query, "\n AND Project1 in ({project*}) ")
+    
+  }
   if (length(org) > 0) {
     query = paste0(query, "\n AND OrganizationID in ({org*}) ")
   }
@@ -40,6 +45,9 @@ NPDES_AWQMS_Qry<-function
   }
   if (length(HUC8_Name) > 0) {
     query = paste0(query, "\n AND HUC8_Name in ({HUC8_Name*}) ")
+  }
+  if (length(AU_ID) > 0) {
+    query = paste0(query, "\n AND AU_ID in ({AU_ID*}) ")
   }
   if (reject==FALSE) {query=paste0(query,"\n AND Result_status NOT LIKE 'Rejected'")}
   query=paste0(query,"\n AND SampleMedia in ('Water')")
