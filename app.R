@@ -36,25 +36,18 @@ source("Ammonia_RPA_Transform.R")
 source("NameandFraction.R")
 
 
-# Query out the valid values ---------------------------------------------
-
+# Query out the valid values 
 #NPDES only needs a limited # of Chars, this should help speed up the program
-
 #make it so only the RPA groupings are shown in the drop down
 
-chars <- c("All RPA","All Toxics","Copper BLM","ph RPA","Ammonia RPA","DO RPA","Pesticides and PCB RPA","Base Neutral RPA", "Acid Extractable RPA",
-           "VOC RPA","Metals RPA","Industrial General","None")
+chars <- c("All RPA","Toxics","Copper BLM","pH and Ammonia RPA","DO RPA","None")
 
-#create variables with specific characteristics for the different groups
+#create variables with specific characteristics for the different groups 
+#(note, keeping various groupings for metals, VOCs, base neutrals because they can be easier to update, but will all be 
+#pulled under "Toxics")
 
-#Industrial general parameters
-ingen<-c("Chemical oxygen demand","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen", "Organic carbon",
-         "Biochemical oxygen demand, non-standard conditions","Biochemical oxygen demand, standard conditions","pH","Temperature, water")
-#pH RPA
-phrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity")
-
-#Ammonia RPA
-ammrpa<-c("Alkalinity, total","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen","Conductivity","pH","Temperature, water","Salinity")
+#pH and Ammonia RPA (almost the same, ammonia just has the ammonia chars)
+phammrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")
 
 #Copper BLM
 cuB<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
@@ -100,13 +93,13 @@ vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane",
 metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
              "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
              "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
-             "Hardness, carbonate","Hardness, non-carbonate","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")
+             "Hardness, carbonate","Hardness, non-carbonate","Ammonia","Ammonia and ammonium","Ammonia-nitrogen")
 
-#all toxics (metals, voc, acid extractable, base neutral,pesticides and PCBs,metals)
+#all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs)
 tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
 
 #one-off characteristics of interest
-oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
+oneoff<-unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
                  "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
                  "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
 
@@ -156,7 +149,7 @@ HUC8_Names <- c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork',
                 'Walla Walla', 'Wallowa', 'Warner Lakes', 'Williamson', 'Willow', 'Wilson-Trusk-Nestuccu', 'Yamhill')
 
 
-# Define UI 
+########################################### Define UI ########################################################
 ui <- fluidPage(
 
    # Sidebar with parameter inputs
@@ -228,11 +221,8 @@ ui <- fluidPage(
                        "Select organization",
                        choices = organization,
                        multiple = TRUE),
-       #Reject button
-       checkboxInput("Reject",
-                     label = "Keep Rejected data",
-                     value = FALSE),
-       #keep summary stats button
+
+       #keep continuous data summary stats button
        checkboxInput("Summary",
                      label="Keep Continuous Data Summary Statistics (other than 7 day avg)?",
                      value=FALSE),
@@ -279,7 +269,8 @@ ui <- fluidPage(
                               the coast.")
                            )
                  ),
-        # Aliana added a data table
+        
+        #Data table
         tabPanel("Table",
                  dataTableOutput("table")),
         #add leaflet map
@@ -294,40 +285,34 @@ ui <- fluidPage(
 #add icon to show when program is running query or download
 add_busy_spinner(spin = "fading-circle"))
 
+###############################################  SERVER    ###########################################################
+
 # Define server logic required to display query
 server <- function(input, output) {
   
    
    #have to make dates into strings, otherwise they come out as funny numbers
-   #all other variables are reactive 'as is' except for reject button
+   #all other variables are reactive 'as is'
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
 
    orig<-eventReactive(input$goButton,{
      
    rstdt<-toString(sprintf("%s",input$startd))
    rendd<-toString(sprintf("%s",input$endd))
-   rrej<-if(input$Reject) {TRUE} else {FALSE} 
    
    #build characteristic list
-   gch<-switch(input$characteristics,"All RPA"=unique(c(phrpa,ammrpa,cuB,dorpa,ingen,pestrpa,bneut,aext,vocrpa,metalsrpa,"Chlorine")),
+   gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine")),
                  "Copper BLM"=cuB,   
-                 "ph RPA"=phrpa,
-                 "Ammonia RPA"=ammrpa,
+                 "pH and Ammonia RPA"=phammrpa,
                  "DO RPA"=dorpa,
-                 "Pesticides and PCB RPA"=pestrpa,
-                 "Base Neutral RPA"=bneut,
-                 "Acid Extractable RPA"=aext,
-                 "VOC RPA"=vocrpa,
-                 "Metals RPA"=metalsrpa,
-                 "All Toxics"=tox,
-                 "Industrial General"=ingen,
+                 "Toxics"=tox,
                  "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
    one<-c(input$oneoff)
    rchar<-c(gch,one)
    
    #actual query for data
    dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
-                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID),reject=rrej)
+                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID))
    
    
    #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
@@ -608,14 +593,37 @@ server <- function(input, output) {
    
    })
 
-   #create list of the parameters in query, get it into a formatted excel to export so we have record of query
-   #add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is available
+   ###############################          EXCEL OUTPUT       ##########################################################
+  
+
+   #create workbook and sheet
+   wb<-createWorkbook()
+   
+   ###style library-put all different styles used in workbooks here
+   
+   #Create title styles
+   mainTitle<-createStyle(fontSize=16,fontColour="blue",textDecoration=c("bold","underline"))
+   subTitle<-createStyle(fontSize=14,textDecoration="italic")
+   wrap<-createStyle(wrapText=TRUE)
+   
+   #create bold style
+   bold<-createStyle(textDecoration="bold")
+   
+   #create rotated text styel
+   rotate<-createStyle(textRotation = 45)
+   
+   #create shading style
+   shaderot<-createStyle(fgFill="yellow2",textRotation = 45)
+    
+   
+#create list of the parameters in query, get it into a formatted excel to export so we have record of query
+#add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is available  
    param<-eventReactive(input$goButton, {
-     
+      
      #create strings for the input parameters
+      
      startdt<-paste0("Startdate = ",toString(sprintf("%s",input$startd)))
      enddt<-paste0("Enddate = ",toString(sprintf("%s",input$endd)))
-     rejected<-paste0("Is rejected data included?  ",if(input$Reject) {TRUE} else {FALSE})
      stations<- paste0("Stations = ",toString(sprintf("'%s'", input$monlocs)))
      monty<- paste0("Monitoring Location Types = ",toString(sprintf("'%s'", input$montype)))
      charc<- paste0("RPA Group = ",toString(sprintf("'%s'", input$characteristics)))
@@ -623,38 +631,26 @@ server <- function(input, output) {
      huc8s<-paste0("HUC8 = ",toString(sprintf("'%s'", input$huc8_nms)))
      auids<-paste0("Assessment Unit = ",toString(sprintf("'%s'",input$AUID)))
      organiz<- paste0("Organization = ",toString(sprintf("'%s'", input$orgs)))
-     allchar<- paste0("List of all potential RPA characteristics (All Toxics includes Pesticides/PCB RPA, Base Neutral RPA, Acid Extractable RPA, VOC RPA, and Metals RPA) \n",
-                      "pH RPA: ",toString(phrpa), "\n\n",
-                      "Ammonia RPA: ",toString(ammrpa),"\n\n",
+     allchar<- paste0("List of all RPA characteristics (Toxics includes Pesticides/PCBs, Base Neutral, Acid Extractable, VOC, and Metals groupings) \n\n",
+                      "pH and Ammonia RPA: ",toString(phammrpa), "\n\n",
                       "Copper BLM: ",toString(cuB),"\n\n",
-                      "Do RPA: ",toString(dorpa),"\n\n",
-                      "Pesticide and PCBs RPA: ",toString(pestrpa),"\n\n",
-                      "Base Neutral RPA: ",toString(bneut),"\n\n",
-                      "Acid Exractable RPA: ",toString(aext),"\n\n",
-                      "Volatile Organic Carbon RPA: ",toString(vocrpa), "\n\n",
-                      "Metals and Hardness RPA: ",toString(metalsrpa), "\n\n",
-                      "Industrial General Parameters: ",toString(ingen))
+                      "DO RPA: ",toString(dorpa),"\n\n",
+                      "Pesticide and PCBs: ",toString(pestrpa),"\n\n",
+                      "Base Neutral: ",toString(bneut),"\n\n",
+                      "Acid Exractable: ",toString(aext),"\n\n",
+                      "Volatile Organic Carbon: ",toString(vocrpa), "\n\n",
+                      "Metals and Hardness: ",toString(metalsrpa))
      
      #add continuous data availability warning
      warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")})
      
-     #create workbook and sheet
-     wb<-createWorkbook()
        
-     #Search Criteria
+     ###Search Criteria
      addWorksheet(wb,"Search Criteria")
-       
-       #Create title styles
-       mainTitle<-createStyle(fontSize=16,fontColour="blue",textDecoration=c("bold","underline"))
-       subTitle<-createStyle(fontSize=14,textDecoration="italic")
-       wrap<-createStyle(wrapText=TRUE)
-       #create bold style
-       bold<-createStyle(textDecoration="bold")
-       #create rotated text styel
-       rotate<-createStyle(textRotation = 45)
        
        # Add title
        title<-"RPA Data Search Criteria"
+       
        #add title to sheet
        addStyle(wb,sheet="Search Criteria",style=mainTitle,rows=1,cols=1)
        writeData(wb,sheet="Search Criteria",x=title,startRow=1,startCol=1)
@@ -682,13 +678,13 @@ server <- function(input, output) {
        writeData(wb,sheet="Search Criteria",x=huc8s,startCol=1,startRow=13)
        writeData(wb,sheet="Search Criteria",x=auids,startCol=1,startRow=14)
        writeData(wb,sheet="Search Criteria",x=organiz,startCol=1,startRow=15)
-       writeData(wb,sheet="Search Criteria",x=rejected,startCol=1,startRow=16)
+
        writeData(wb,sheet="Search Criteria",x=allchar,startCol=1,startRow=18)
        
        addStyle(wb,sheet="Search Criteria",style=wrap,rows=18,cols=1)
        setColWidths(wb,sheet="Search Criteria", cols=1, widths=220)
        
-       #Map
+   ###Map
        #conditional on whether map button is checked
        if (input$NoMap==TRUE) 
        
@@ -708,7 +704,7 @@ server <- function(input, output) {
        insertImage(wb,"Map","map.jpeg",width=10,height=7)
        }
        
-       #Diagnostics sheet, for totals and other stats we want to calculate
+      ###Diagnostics sheet, for totals and other stats we want to calculate
        addWorksheet(wb,"Diagnostics")
        #create counts of each parameter (combine metals name and fraction first)
             cnt<-namefrac(dsub())
@@ -735,8 +731,8 @@ server <- function(input, output) {
             writeData(wb,"Diagnostics",startRow=1,startCol=1,x="Estimated Result Count column contains ALL estimated results, including those that are between MDL and MRL (QL and DL)")
             setColWidths(wb,"Diagnostics",cols=1:5,widths=20)
 
-  #Data worksheets
-       # All data      
+  #####Data worksheets
+       #All data      
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
         
@@ -747,16 +743,15 @@ server <- function(input, output) {
                         
                            writeData(wb,"Toxics_Data_Format",startRow=2,x="Examine 'Result_Comment' and 'Result_Type' columns to determine data usability")
                            addStyle(wb,"Toxics_Data_Format",style=bold,rows=2,cols=1:15)
-                           
-                           #create shading style
-                           shaderot<-createStyle(fgFill="yellow2",textRotation = 45)
                            addStyle(wb,"Toxics_Data_Format",style=shaderot,cols=1:15,rows=4)
                                                           }
        
        #RPA summary stats
        if (nrow(RPAsum())!=0) {addWorksheet(wb,"Toxics_SummaryStats")
-               writeDataTable(wb,"Toxics_SummaryStats",startRow=2,x=RPAsum(),tableStyle="none")
-            }
+               writeDataTable(wb,"Toxics_SummaryStats",startRow=3,x=RPAsum(),tableStyle="none")
+               writeData(wb,"Toxics_SummaryStats",startRow=1,startCol=1,x="Compare with summary statistic results in RPA tool, contact Aliana Britson and Erich Brandstetter in case of discrepancy")
+       }
+            
        #Copper BLM                    
        if (nrow(copper())!=0) {addWorksheet(wb,"CuBLM_Data_Format")
                               writeData(wb,"CuBLM_Data_Format",startRow=1,x="Copper BLM data. Examine MLocID for sample location. Examine Result Type columns for data quality")
@@ -874,12 +869,15 @@ server <- function(input, output) {
             #remove MLocID column, overkill, keep act_id column, want something to tie back to original data
             pHrpa<-lapply(pHrpa(),function(x) x[,-c(1)])
             
+            #notes
+            writeData(wb,"pH_RPA",startRow=1,x="pH data split by monitoring location. Please see map to ascertain appropriatness of location for permitting purposes. Select data from desired monitoring locations.")
+            
             #for loop to write data all on one spreadsheet
             for (i in 1:length(pHrpa())) {
               
               #add header that is monlocID
-              writeData(wb,"pH_RPA",x=names(pHrpa[i]),startRow=1,startCol=num+2)
-              addStyle(wb,"pH_RPA",style=bold,rows=1,cols=1:1000)
+              writeData(wb,"pH_RPA",x=names(pHrpa[i]),startRow=3,startCol=num+2)
+              addStyle(wb,"pH_RPA",style=bold,rows=3,cols=1:1000)
               
               #make sure all columns are there for each parameter (add as NA if there is no data)
               pHrpa[[i]]<-if(!("Temperature, water" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Temperature, water"=NA)} else {pHrpa[[i]]}
@@ -891,7 +889,7 @@ server <- function(input, output) {
               pHrpa[[i]]<-pHrpa[[i]][,c("act_id","pH","Temperature, water","Salinity","Alkalinity, total")]
               
               #add data
-              writeData(wb,"pH_RPA",x=pHrpa[[i]],startRow=3,startCol=num,colNames=TRUE)
+              writeData(wb,"pH_RPA",x=pHrpa[[i]],startRow=4,startCol=num,colNames=TRUE)
               #add 7 to counter so that next station doesn't overwrite the previous
               num<-num+7
             }
@@ -913,6 +911,7 @@ output$downloadData <- downloadHandler(
     })
 
 }
+
 # Run the application
 shinyApp(ui = ui, server = server)
 
