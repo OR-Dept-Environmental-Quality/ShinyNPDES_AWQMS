@@ -110,6 +110,7 @@ oneoff<-unique(c("Chlorine",tox,phrpa,ammrpa,dorpa,cuB,"Chemical oxygen demand",
                  "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
                  "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
 
+
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
 if(!file.exists("query_cache.RData") | 
@@ -421,7 +422,9 @@ server <- function(input, output) {
    
    #take data, make subtable just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
+     
      #only keep characteristics that are in the tox character list
+
      rpa<-subset(data(),(Char_Name %in% tox))
     
      if (nrow(rpa)!=0){
