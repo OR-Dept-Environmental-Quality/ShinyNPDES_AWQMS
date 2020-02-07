@@ -599,7 +599,7 @@ server <- function(input, output) {
    #create workbook and sheet
    wb<-createWorkbook()
    
-   ###style library-put all different styles used in workbooks here
+   ### Style library-put all different styles used in workbooks here
    
    #Create title styles
    mainTitle<-createStyle(fontSize=16,fontColour="blue",textDecoration=c("bold","underline"))
@@ -609,7 +609,7 @@ server <- function(input, output) {
    #create bold style
    bold<-createStyle(textDecoration="bold")
    
-   #create rotated text styel
+   #create rotated text style
    rotate<-createStyle(textRotation = 45)
    
    #create shading style
