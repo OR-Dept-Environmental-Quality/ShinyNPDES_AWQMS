@@ -465,15 +465,12 @@ server <- function(input, output) {
      
      #combine Char_Name and Sample_Fraction for just metals
      rpa<-namefrac(rpa)
-    
-    #need to change data so that anything less than MDL is reported as ND 
-    #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
-     rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
+
      
-     #change data that is between MDL and MRL to have < infront of result
+     #change data that is between MDL and MRL to have e infront of result
      rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & (!is.na(rpa$MRLValue)) 
                         & rpa$Result_Numeric<rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue,
-                        paste0("<",rpa$Result),
+                        paste0("e",rpa$Result),
                         rpa$Result)
      
      #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
@@ -504,24 +501,25 @@ server <- function(input, output) {
             
             #directions on how to deal with NDs and < taken from RPA IMD Appendix C.
             #for calculating mean, ND=0, between DL and QL=DL
-            mutate(Result_mean = case_when(Result=="ND" ~ 0,
-                                           as.numeric(Result)>=MRLValue ~ as.numeric(Result),
-                                           "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
-                                           "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
-                                           )) %>%
+            mutate(Result_mean = case_when(as.numeric(Result)>=MRLValue ~ as.numeric(Result),
+                                           substr(Result,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                           substr(Result,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
+                                           substr(Result,start=1,stop=1) %in% "<" ~ 0
+            )) %>%
             #for calculating geo mean, ND=1/2DL, but need to be careful for carcinogens- sometimes 1/2 DL is near the  WQ criterion, which can lead to RP when we don't actually know
             #create column that uses result for caclulating the geo mean
-            mutate(Result_geomean=case_when(Result=="ND" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
-                                            Result=="ND" & is.na(MDLValue) ~ as.numeric(MRLValue)/2,
-                                            as.numeric(Result)>=MRLValue ~ as.numeric(Result),
-                                            "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
-                                            "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
+            mutate(Result_geomean=case_when(as.numeric(Result)>=MRLValue ~ as.numeric(Result),
+                                            substr(Result,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                            substr(Result,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
+                                            substr(Result,start=1,stop=1) %in% "<" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
+                                            substr(Result,start=1,stop=1) %in% "<" & is.na(MDLValue) ~ as.numeric(MRLValue)/2
+                                            
             )) %>%
             group_by(Char_Name)%>%
    
             #do summary stats
             #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
-            summarise(count_all = n(), count_result = sum(Result!="ND"), average = round(mean(Result_mean, na.rm = TRUE),2),
+            summarise(count_all = n(), count_result = sum(!(substr(Result,start=1,stop=1) %in% "<")), average = round(mean(Result_mean, na.rm = TRUE),2),
                       mn = mean(Result_mean, na.rm = TRUE),
                       stdev = sd(Result_mean, na.rm = T), max = as.character(max(Result_mean, na.rm = TRUE)), 
                       geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
