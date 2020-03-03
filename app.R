@@ -520,7 +520,7 @@ server <- function(input, output) {
                                             substr(Result,start=1,stop=1) %in% "<" & is.na(MDLValue) ~ as.numeric(MRLValue)/2
                                             
             )) %>%
-            group_by(Char_Name)%>%
+            group_by(MonLocType,Char_Name)%>%
    
             #do summary stats
             #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
@@ -537,7 +537,7 @@ server <- function(input, output) {
          RPAsum<-unique(left_join(RPAsum,cas, by="Char_Name"))
          
          #get into an order that can go right into the RPA spreadsheet
-         RPAsum<-subset(RPAsum,select=c(Char_Name,count_result,count_all,max,geomean,average,CV,CASNumber))
+         RPAsum<-subset(RPAsum,select=c(MonLocType,Char_Name,count_result,count_all,max,geomean,average,CV,CASNumber))
    
         
       } 
