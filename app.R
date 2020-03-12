@@ -19,6 +19,7 @@ library(shinybusy)
 library(openxlsx)
 library(tidyr)
 library(tidyverse)
+library(DT)
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -272,12 +273,12 @@ ui <- fluidPage(
         
         #Data table
         tabPanel("Table",
-                 dataTableOutput("table")),
+                 DT::dataTableOutput("table")),
         #add leaflet map
         tabPanel("Map",leafletOutput("locs")),
         #check diagnositcs
         tabPanel("RPA Summary",
-                 dataTableOutput("RPAsum"))
+                 DT::dataTableOutput("RPAsum"))
         )
    )
 ),
