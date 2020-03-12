@@ -555,9 +555,35 @@ server <- function(input, output) {
    #ammonia RPA output, similar to Copper BLM output
    amm<-eventReactive(input$goButton,{
      
-     am<-amRPA(data())
+     amdata<-data()
+     amdata<-unit_conv(amdata,"Temperature, water","deg F","deg C")
+     amdata<-unit_conv(amdata,"Ammonia","ug/l","mg/l")
      
-     am
+     
+     # only take the analytes we're interested in 
+     char<-c("Alkalinity, total","pH","Temperature, water","Ammonia","Salinity","Ammonia-nitrogen",
+             "Conductivity","Ammonia and ammonium")
+     
+     #remove any samples that are calculated from continuous data (eg. 7 day min)
+     y<-subset(amdata,amdata$Char_Name %in% char & is.na(amdata$Statistical_Base))
+     
+     #there were some special projects at one point that looked at "dissolved alkalinity"-according to Linda McRae (5/16/2019) 
+     #what they did was take two samples, one was filtered (dissolved alkalinity) and the other one wasn't (total alkalinity)
+     #usually alkalinity is taken on a non-filtered sample, so we shall remove the "dissolved alkalinity" samples
+     y<-subset(y,!(y$Char_Name=="Alkalinity, total" & y$Sample_Fraction=="Dissolved"))
+     
+     #combine name and method speciation, otherwise we get a bunch of rows we don't need
+     y$Char_Name<-paste0(y$Char_Name,(ifelse(is.na(y$Method_Speciation),paste(""),paste0(",",y$Method_Speciation))))
+     
+     #just want a subset of the columns, too many columns makes reshape very complicated
+     amdata<-subset(y,select=c("Char_Name","Result","Result_Unit","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1","act_id","Result_Type"))
+     
+     #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
+     #applies to some ORDEQ data
+     amdata$act_id<-gsub("-FM$","",amdata$act_id)
+     
+     
+     amdata
    })
    
    #pH RPA output, creates a list of data frames, one for each site
@@ -863,7 +889,35 @@ server <- function(input, output) {
                               }
        #Ammonia RPA                     
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
-                           writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
+         
+           #get ammonia data
+            amm<-subset(amm(),Char_Name %in% c("Ammonia","Ammonia-nitrogen","Ammonia and ammonium"), 
+                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           
+           #Temperature data
+            temp<-subset(amm(),Char_Name=="Temperature, water",
+                         select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           
+           #pH
+            
+            ph<-subset(amm(),Char_Name=="pH",
+                       select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))  
+           
+            #Alkalinity
+
+            alk<-subset(amm(),Char_Name=="Alkalinity, total",
+                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           #format 
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=1,x="Ammonia")
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=8,x="Temperature")
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=15,x="pH")
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=21,x="Alkalinity")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=amm,startRow=4,startCol=1,tableStyle="none")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=temp,startRow=4,startCol=8,tableStyle="none")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=ph,startRow=4,startCol=15,tableStyle="none")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=alk,startRow=4,startCol=21,tableStyle="none")
+                           
+                           }
        
         #pH RPA
         if (length(pHrpa())!=0) {addWorksheet(wb,"pH_RPA")
