@@ -19,6 +19,7 @@ library(shinybusy)
 library(openxlsx)
 library(tidyr)
 library(tidyverse)
+library(DT)
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -272,12 +273,12 @@ ui <- fluidPage(
         
         #Data table
         tabPanel("Table",
-                 dataTableOutput("table")),
+                 DT::dataTableOutput("table")),
         #add leaflet map
         tabPanel("Map",leafletOutput("locs")),
         #check diagnositcs
         tabPanel("RPA Summary",
-                 dataTableOutput("RPAsum"))
+                 DT::dataTableOutput("RPAsum"))
         )
    )
 ),
@@ -457,23 +458,25 @@ server <- function(input, output) {
                            paste0("7440382I"),
                            rpa$CASNumber)
      
-     #harndess, add 'Hardness' to CAS so RPA tool has something to work with
+     #hardness, add 'Hardness' to CAS so RPA tool has something to work with
      rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Total hardness","Hardness, Ca, Mg",
                                                 "Hardness, carbonate","Hardness, non-carbonate"),
                            paste0("HARDNESS"),
                            rpa$CASNumber)
      
+     #same for alkalinity
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Alkalinity, total"),
+                           paste0("ALKALINITY"),
+                           rpa$CASNumber)
+     
      #combine Char_Name and Sample_Fraction for just metals
      rpa<-namefrac(rpa)
-    
-    #need to change data so that anything less than MDL is reported as ND 
-    #(right now anything less than MRL is reported as <MRL, or <MDL if reported to detection limit)
-     rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & rpa$Result_Numeric<=rpa$MDLValue,"ND",rpa$Result)
+
      
-     #change data that is between MDL and MRL to have < infront of result
+     #change data that is between MDL and MRL to have e infront of result
      rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & (!is.na(rpa$MRLValue)) 
                         & rpa$Result_Numeric<rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue,
-                        paste0("<",rpa$Result),
+                        paste0("e",rpa$Result),
                         rpa$Result)
      
      #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
@@ -504,24 +507,25 @@ server <- function(input, output) {
             
             #directions on how to deal with NDs and < taken from RPA IMD Appendix C.
             #for calculating mean, ND=0, between DL and QL=DL
-            mutate(Result_mean = case_when(Result=="ND" ~ 0,
-                                           as.numeric(Result)>=MRLValue ~ as.numeric(Result),
-                                           "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
-                                           "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
-                                           )) %>%
+            mutate(Result_mean = case_when(as.numeric(Result)>=MRLValue ~ as.numeric(Result),
+                                           substr(Result,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                           substr(Result,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
+                                           substr(Result,start=1,stop=1) %in% "<" ~ 0
+            )) %>%
             #for calculating geo mean, ND=1/2DL, but need to be careful for carcinogens- sometimes 1/2 DL is near the  WQ criterion, which can lead to RP when we don't actually know
             #create column that uses result for caclulating the geo mean
-            mutate(Result_geomean=case_when(Result=="ND" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
-                                            Result=="ND" & is.na(MDLValue) ~ as.numeric(MRLValue)/2,
-                                            as.numeric(Result)>=MRLValue ~ as.numeric(Result),
-                                            "<" %in% substr(Result,start=1,stop=1) & !is.na(MDLValue) ~ as.numeric(MDLValue),
-                                            "<" %in% substr(Result,start=1,stop=1) & is.na(MDLValue) ~ as.numeric(MRLValue)
+            mutate(Result_geomean=case_when(as.numeric(Result)>=MRLValue ~ as.numeric(Result),
+                                            substr(Result,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                            substr(Result,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
+                                            substr(Result,start=1,stop=1) %in% "<" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
+                                            substr(Result,start=1,stop=1) %in% "<" & is.na(MDLValue) ~ as.numeric(MRLValue)/2
+                                            
             )) %>%
-            group_by(Char_Name)%>%
+            group_by(MonLocType,Char_Name)%>%
    
             #do summary stats
             #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
-            summarise(count_all = n(), count_result = sum(Result!="ND"), average = round(mean(Result_mean, na.rm = TRUE),2),
+            summarise(count_all = n(), count_result = sum(!(substr(Result,start=1,stop=1) %in% "<")), average = round(mean(Result_mean, na.rm = TRUE),2),
                       mn = mean(Result_mean, na.rm = TRUE),
                       stdev = sd(Result_mean, na.rm = T), max = as.character(max(Result_mean, na.rm = TRUE)), 
                       geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
@@ -534,7 +538,7 @@ server <- function(input, output) {
          RPAsum<-unique(left_join(RPAsum,cas, by="Char_Name"))
          
          #get into an order that can go right into the RPA spreadsheet
-         RPAsum<-subset(RPAsum,select=c(Char_Name,count_result,count_all,max,geomean,average,CV,CASNumber))
+         RPAsum<-subset(RPAsum,select=c(MonLocType,Char_Name,count_result,count_all,max,geomean,average,CV,CASNumber))
    
         
       } 
@@ -551,9 +555,35 @@ server <- function(input, output) {
    #ammonia RPA output, similar to Copper BLM output
    amm<-eventReactive(input$goButton,{
      
-     am<-amRPA(data())
+     amdata<-data()
+     amdata<-unit_conv(amdata,"Temperature, water","deg F","deg C")
+     amdata<-unit_conv(amdata,"Ammonia","ug/l","mg/l")
      
-     am
+     
+     # only take the analytes we're interested in 
+     char<-c("Alkalinity, total","pH","Temperature, water","Ammonia","Salinity","Ammonia-nitrogen",
+             "Conductivity","Ammonia and ammonium")
+     
+     #remove any samples that are calculated from continuous data (eg. 7 day min)
+     y<-subset(amdata,amdata$Char_Name %in% char & is.na(amdata$Statistical_Base))
+     
+     #there were some special projects at one point that looked at "dissolved alkalinity"-according to Linda McRae (5/16/2019) 
+     #what they did was take two samples, one was filtered (dissolved alkalinity) and the other one wasn't (total alkalinity)
+     #usually alkalinity is taken on a non-filtered sample, so we shall remove the "dissolved alkalinity" samples
+     y<-subset(y,!(y$Char_Name=="Alkalinity, total" & y$Sample_Fraction=="Dissolved"))
+     
+     #combine name and method speciation, otherwise we get a bunch of rows we don't need
+     y$Char_Name<-paste0(y$Char_Name,(ifelse(is.na(y$Method_Speciation),paste(""),paste0(",",y$Method_Speciation))))
+     
+     #just want a subset of the columns, too many columns makes reshape very complicated
+     amdata<-subset(y,select=c("Char_Name","Result","Result_Unit","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1","act_id","Result_Type"))
+     
+     #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
+     #applies to some ORDEQ data
+     amdata$act_id<-gsub("-FM$","",amdata$act_id)
+     
+     
+     amdata
    })
    
    #pH RPA output, creates a list of data frames, one for each site
@@ -859,7 +889,35 @@ server <- function(input, output) {
                               }
        #Ammonia RPA                     
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
-                           writeDataTable(wb,"Ammonia_RPA_Format",x=amm(),tableStyle="none")}
+         
+           #get ammonia data
+            amm<-subset(amm(),Char_Name %in% c("Ammonia","Ammonia-nitrogen","Ammonia and ammonium"), 
+                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           
+           #Temperature data
+            temp<-subset(amm(),Char_Name=="Temperature, water",
+                         select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           
+           #pH
+            
+            ph<-subset(amm(),Char_Name=="pH",
+                       select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))  
+           
+            #Alkalinity
+
+            alk<-subset(amm(),Char_Name=="Alkalinity, total",
+                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           #format 
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=1,x="Ammonia")
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=8,x="Temperature")
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=15,x="pH")
+          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=21,x="Alkalinity")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=amm,startRow=4,startCol=1,tableStyle="none")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=temp,startRow=4,startCol=8,tableStyle="none")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=ph,startRow=4,startCol=15,tableStyle="none")
+          writeDataTable(wb,"Ammonia_RPA_Format",x=alk,startRow=4,startCol=21,tableStyle="none")
+                           
+                           }
        
         #pH RPA
         if (length(pHrpa())!=0) {addWorksheet(wb,"pH_RPA")
