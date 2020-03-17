@@ -31,8 +31,6 @@ options(scipen=999)
 #plus, for NPDES only need a subset of data- 
 #the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types
 source("NPDES_AWQMSQuery.R")
-#contains function to transform data into proper units and format to run through Ammonia RPA
-source("Ammonia_RPA_Transform.R")
 #function to combine characteristic name and sample fraction for metals
 source("NameandFraction.R")
 
