@@ -573,9 +573,6 @@ server <- function(input, output) {
      #combine name and method speciation, otherwise we get a bunch of rows we don't need
      y$Char_Name<-paste0(y$Char_Name,(ifelse(is.na(y$Method_Speciation),paste(""),paste0(",",y$Method_Speciation))))
      
-     #just want a subset of the columns, too many columns makes reshape very complicated
-     amdata<-subset(y,select=c("Char_Name","Result","Result_Unit","SampleStartDate","SampleStartTime","OrganizationID","MLocID","Project1","act_id","Result_Type"))
-     
      #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
      #applies to some ORDEQ data
      amdata$act_id<-gsub("-FM$","",amdata$act_id)
@@ -887,33 +884,43 @@ server <- function(input, output) {
                               }
        #Ammonia RPA                     
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
-         
+           
            #get ammonia data
-            amm<-subset(amm(),Char_Name %in% c("Ammonia","Ammonia-nitrogen","Ammonia and ammonium"), 
-                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           amm<-subset(amm(),Char_Name %in% c("Ammonia","Ammonia-nitrogen","Ammonia and ammonium"), 
+                       select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
            
            #Temperature data
-            temp<-subset(amm(),Char_Name=="Temperature, water",
-                         select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           temp<-subset(amm(),Char_Name=="Temperature, water",
+                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
            
            #pH
-            
-            ph<-subset(amm(),Char_Name=="pH",
-                       select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))  
+           ph<-subset(amm(),Char_Name=="pH",
+                      select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))  
            
-            #Alkalinity
-
-            alk<-subset(amm(),Char_Name=="Alkalinity, total",
-                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           #Alkalinity
+           alk<-subset(amm(),Char_Name=="Alkalinity, total",
+                       select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+           
+           #get salinity data for avg salinity
+           sal<-subset(amm(),Char_Name=="Salinity")
+           saltype<-sal%>%
+             group_by(MonLocType,Result_Unit)%>%
+             summarise(average = mean(Result_Numeric))
+           
+           
            #format 
-          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=1,x="Ammonia")
-          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=8,x="Temperature")
-          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=15,x="pH")
-          writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=21,x="Alkalinity")
-          writeDataTable(wb,"Ammonia_RPA_Format",x=amm,startRow=4,startCol=1,tableStyle="none")
-          writeDataTable(wb,"Ammonia_RPA_Format",x=temp,startRow=4,startCol=8,tableStyle="none")
-          writeDataTable(wb,"Ammonia_RPA_Format",x=ph,startRow=4,startCol=15,tableStyle="none")
-          writeDataTable(wb,"Ammonia_RPA_Format",x=alk,startRow=4,startCol=21,tableStyle="none")
+           writeData(wb,"Ammonia_RPA_Format",startRow=1,startCol=1,x="Ammonia RPA. Copy and paste MLocID, SampleStartDate, and Result into RPA workbook.")
+           
+           writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=1,x="Ammonia")
+           writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=8,x="Temperature")
+           writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=15,x="pH")
+           writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=22,x="Alkalinity")
+           writeData(wb,"Ammonia_RPA_Format",startRow=3,startCol=29,x="Average Salinity by Monitoring Location Type")
+           writeDataTable(wb,"Ammonia_RPA_Format",x=amm,startRow=4,startCol=1,tableStyle="none")
+           writeDataTable(wb,"Ammonia_RPA_Format",x=temp,startRow=4,startCol=8,tableStyle="none")
+           writeDataTable(wb,"Ammonia_RPA_Format",x=ph,startRow=4,startCol=15,tableStyle="none")
+           writeDataTable(wb,"Ammonia_RPA_Format",x=alk,startRow=4,startCol=22,tableStyle="none")
+           writeDataTable(wb,"Ammonia_RPA_Format",x=saltype,startRow=4,startCol=29,tableStyle="none")
                            
                            }
        
