@@ -50,7 +50,7 @@ phammrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivi
 
 #Copper BLM
 cuB<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
-       "Temperature, water","Total Sulfate","Sulfide")
+       "Temperature, water","Total Sulfate","Sulfide","Conductivity","Specific conductance")
 
 #Dissolved Oxygen RPA
 dorpa<-c("Dissolved oxygen (DO)","Dissolved oxygen saturation","Biochemical oxygen demand, non-standard conditions",
