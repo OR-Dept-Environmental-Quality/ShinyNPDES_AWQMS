@@ -419,8 +419,8 @@ server <- function(input, output) {
      #checked AWQMS database, all alkalinity is reported in mg/l or mg/l CaCO3, no need for conversion
      #get list of char names in RPA
      names<-unique(rpa$Char_Name)
-     #remove alkalinity, that needs to stay as mg/l
-     names<-names[names !="Alkalinity, total"]
+     #remove alkalinity and harndess, those needs to stay as mg/l
+     names<-names[!(names %in% c("Alkalinity, total","Hardness, Ca, Mg"))]
     
      rpa<-unit_conv(rpa,names,"mg/l","ug/l")
      rpa<-unit_conv(rpa,names,"ng/l","ug/l")
@@ -967,7 +967,7 @@ server <- function(input, output) {
 #set to give NAs as blank cells
 output$downloadData <- downloadHandler(
   
-  filename = function() {paste(input$permit_num,"_AWQMS_Download-", Sys.Date(),".xlsx", sep="")},
+  filename = function() {paste(input$permit_num,"-DATA-AWQMS-", format(Sys.Date(),"%Y%m%d"),".xlsx", sep="")},
   content = function(file) {
     #sheet with query parameters
     saveWorkbook(param(),file)
