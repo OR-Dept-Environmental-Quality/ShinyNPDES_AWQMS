@@ -580,43 +580,6 @@ server <- function(input, output) {
      
      amdata
    })
-   
-   #pH RPA output, creates a list of data frames, one for each site
-   pHrpa<-eventReactive(input$goButton,{
-   
-     #subset data so we only get the parameters we need 
-     dat2<-subset(data(),Char_Name %in% c('Temperature, water','Alkalinity, total','pH','Salinity'))
-     
-     #remove any samples that are calculated from continuous data (eg. 7 day min)
-     dat2<-subset(dat2, is.na(dat2$Statistical_Base))
-   
-     #remove "dissolved alkalinity" samples- were only done in a few projects and are not the way we usually do alkalinity
-     dat2<-subset(dat2,!(dat2$Char_Name=="Alkalinity, total" & dat2$Sample_Fraction=="Dissolved" & dat2$OrganizationID=='OREGONDEQ'))
-     
-     #have occasional issues with 2 pH values (one field, one lab) for ORDEQ data
-     #remove Sample-Routine pH if ORDEQ data
-     dat2<-subset(dat2,!(dat2$Char_Name=='pH' & dat2$OrganizationID=='OREGONDEQ' & dat2$Activity_Type=='Sample-Routine'))
-     
-   #temp, alk, pH, salinity, conversions
-   #salinity in ppt and ppth--all is parts per thousand 
-   #alkalinity is all in mg/l
-   #has no units, and all data in weird units in AWQMS doesn't need any conversion
-   dat2<-unit_conv(dat2,'Temperature, water','deg F', 'deg C')
-   
-   #only need select set of columns
-   dat2<-subset(dat2,select=c(MLocID,Char_Name,Result,act_id))
-   
-   #remove "-FM" from end of activity id, so alkalinity doesn't end up in its own row with no field parameters from the same activity
-   #applies to some ORDEQ data
-   dat2$act_id<-gsub("-FM$","",dat2$act_id)
-   
-   #split data by monitoring location (creates list of dataframes) and convert data from long to wide format
-   dat3<-split(dat2,dat2$MLocID)
-   dat3<-lapply(dat3,function(x) spread(x,key=Char_Name,value=Result))
-   
-   dat3
-   
-   })
 
    ###############################          EXCEL OUTPUT       ##########################################################
   
@@ -923,40 +886,7 @@ server <- function(input, output) {
            writeDataTable(wb,"Ammonia_RPA_Format",x=saltype,startRow=4,startCol=29,tableStyle="none")
                            
                            }
-       
-        #pH RPA
-        if (length(pHrpa())!=0) {addWorksheet(wb,"pH_RPA")
-            #add counter to increment
-            num<-1
-            
-            #remove MLocID column, overkill, keep act_id column, want something to tie back to original data
-            pHrpa<-lapply(pHrpa(),function(x) x[,-c(1)])
-            
-            #notes
-            writeData(wb,"pH_RPA",startRow=1,x="pH data split by monitoring location. Please see map to ascertain appropriatness of location for permitting purposes. Select data from desired monitoring locations.")
-            
-            #for loop to write data all on one spreadsheet
-            for (i in 1:length(pHrpa())) {
-              
-              #add header that is monlocID
-              writeData(wb,"pH_RPA",x=names(pHrpa[i]),startRow=3,startCol=num+2)
-              addStyle(wb,"pH_RPA",style=bold,rows=3,cols=1:1000)
-              
-              #make sure all columns are there for each parameter (add as NA if there is no data)
-              pHrpa[[i]]<-if(!("Temperature, water" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Temperature, water"=NA)} else {pHrpa[[i]]}
-              pHrpa[[i]]<-if(!("pH" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "pH"=NA)} else {pHrpa[[i]]}
-              pHrpa[[i]]<-if(!("Alkalinity, total" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Alkalinity, total"=NA)} else {pHrpa[[i]]}
-              pHrpa[[i]]<-if(!("Salinity" %in% colnames(pHrpa[[i]]))){add_column(pHrpa[[i]], "Salinity"=NA)} else {pHrpa[[i]]}
-              
-              #reorder columns
-              pHrpa[[i]]<-pHrpa[[i]][,c("act_id","pH","Temperature, water","Salinity","Alkalinity, total")]
-              
-              #add data
-              writeData(wb,"pH_RPA",x=pHrpa[[i]],startRow=4,startCol=num,colNames=TRUE)
-              #add 7 to counter so that next station doesn't overwrite the previous
-              num<-num+7
-            }
-        }   
+   
      wb
    })
    
