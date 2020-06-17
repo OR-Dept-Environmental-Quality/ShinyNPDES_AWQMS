@@ -73,7 +73,7 @@ bneut<-c("Benzo[a]pyrene","Dibenz[a,h]anthracene","Benz[a]anthracene","N-Nitroso
          "Di-n-octyl phthalate","Hexachlorobenzene","Anthracene","1,2,4-Trichlorobenzene","2,4-Dinitrotoluene","1,2-Diphenylhydrazine",
          "Pyrene","Dimethyl phthalate","Benzo[ghi]perylene","Indeno[1,2,3-cd]pyrene","Benzo(b)fluoranthene","Fluoranthene",
          "Benzo[k]fluoranthene","Acenaphthylene","Chrysene","2,6-Dinitrotoluene","Pentachlorobenzene","N-Nitrosodi-n-propylamine",
-         "p-Chlorophenyl phenyl ether","Azobenzene")
+         "p-Chlorophenyl phenyl ether","Azobenzene","Bis(2-chloroisopropyl) ether")
 
 #Acid Extractable
 aext<-c("2,4-Dinitrophenol","p-Chloro-m-cresol","Pentachlorophenol","2,4,6-Trichlorophenol","o-Nitrophenol","o-Chlorophenol",
@@ -86,7 +86,7 @@ vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane",
           "1,2-Dichloropropane","1,1,2-Trichloroethane","Trichloroethene (TCE)","Trichloroethylene","1,1,2,2-Tetrachloroethane","o-Dichlorobenzene",
           "Ethylbenzene","p-Dichlorobenzene","Acrolein","Allyl chloride","1,2-Dichloroethane","Toluene","Chlorobenzene",
           "2-Chloroethyl vinyl ether","Chlorodibromomethane","Tetrachloroethene","Tetrachloroethylene","trans-1,2-Dichloroethylene",
-          "m-Dichlorobenzene","1,3-Dichloropropene","Acrylonitrile")
+          "m-Dichlorobenzene","1,3-Dichloropropene","Acrylonitrile","trans-1,3-Dichloropropene","cis-1,3-Dichloropropene")
 
 #Metals and Hardness
 metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
@@ -94,8 +94,8 @@ metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum"
              "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
              "Hardness, carbonate","Hardness, non-carbonate","Ammonia","Ammonia and ammonium","Ammonia-nitrogen")
 
-#all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs)
-tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa)
+#all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - adding some of the "other parameters with state WQ crit" 
+tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
 
 #one-off characteristics of interest
 oneoff<-unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
@@ -465,6 +465,16 @@ server <- function(input, output) {
      #same for alkalinity
      rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Alkalinity, total"),
                            paste0("ALKALINITY"),
+                           rpa$CASNumber)
+     
+     #same for nitrate-nitrite
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Nitrate + Nitrite"),
+                           paste0("NITR"),
+                           rpa$CASNumber)
+     
+     #same for total phenolic compounds
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Phenols"),
+                           paste0("PHENOLICS"),
                            rpa$CASNumber)
      
      #combine Char_Name and Sample_Fraction for just metals
