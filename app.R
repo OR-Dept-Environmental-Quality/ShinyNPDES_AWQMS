@@ -592,10 +592,6 @@ server <- function(input, output) {
    })
 
    ###############################          EXCEL OUTPUT       ##########################################################
-  
-
-   #create workbook and sheet
-   wb<-createWorkbook()
    
    ### Style library-put all different styles used in workbooks here
    
@@ -617,6 +613,9 @@ server <- function(input, output) {
 #create list of the parameters in query, get it into a formatted excel to export so we have record of query
 #add sheet for search criteria,map data, and conditionally RPA data, Copper BLM, and Ammonia RPA if data is available  
    param<-eventReactive(input$goButton, {
+      
+      #create workbook and sheet
+      wb<-createWorkbook()
       
      #create strings for the input parameters
       
