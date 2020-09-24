@@ -92,7 +92,7 @@ vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane",
 metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
              "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
              "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
-             "Hardness, carbonate","Hardness, non-carbonate","Ammonia","Ammonia and ammonium","Ammonia-nitrogen")
+             "Hardness, carbonate","Hardness, non-carbonate","Ammonia","Ammonia and ammonium","Ammonia-nitrogen","Methylmercury(1+)")
 
 #all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - adding some of the "other parameters with state WQ crit" 
 tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
