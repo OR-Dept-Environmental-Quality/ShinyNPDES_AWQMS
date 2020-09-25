@@ -98,10 +98,9 @@ metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum"
 tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
 
 #one-off characteristics of interest
-oneoff<-unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
+oneoff<-base::unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
                  "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
                  "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
-
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -330,7 +329,7 @@ server <- function(input, output) {
    })
    #if summary statistics are included, create flag showing that continous data is available and remove all data that isn't 7 day avg
    output$contwar<-renderText({
-     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")})
+     warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
      warn
    })
    
@@ -639,7 +638,7 @@ server <- function(input, output) {
                       "Metals and Hardness: ",toString(metalsrpa))
      
      #add continuous data availability warning
-     warn<-unique(if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")})
+     warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
      
        
      ###Search Criteria
