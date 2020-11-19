@@ -498,6 +498,11 @@ server <- function(input, output) {
      
      #need to remove dashes from CASNumber row
      rpa$CASNumber<-gsub("-","",rpa$CASNumber)
+     
+     #need to transform date so excel recognizes it as a date
+     rpa$SampleStartDate<-as.Date(rpa$SampleStartDate)
+     rpa$SampleStartDate<-format(rpa$SampleStartDate, "%m/%d/%Y")
+     
      }
      return(rpa)
      
