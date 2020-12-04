@@ -333,9 +333,13 @@ server <- function(input, output) {
      warn
    })
    
-   #remove summary stats that are not 7 day avg
+   #remove summary stats that are not 7 day avg, also check for and remove non-UTF8 characteristics from result_comment column
+   #(which can prevent final excel download from opening)
    data<-eventReactive(input$goButton,{
      dat<-if(input$Summary){orig()} else {subset(orig(),is.na(orig()$Time_Basis)|orig()$Time_Basis %in% "7DADMean")}
+     
+     dat$Result_Comment<-iconv(dat$Result_Comment,"UTF-8","UTF-8",sub='')
+     
      dat
    })
    
