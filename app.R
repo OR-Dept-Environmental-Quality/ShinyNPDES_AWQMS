@@ -33,6 +33,8 @@ options(scipen=999)
 source("NPDES_AWQMSQuery.R")
 #function to combine characteristic name and sample fraction for metals
 source("NameandFraction.R")
+#function to calculate hardness from Ca and Mg, or conductivity
+source("CalcHardness_Function.R")
 
 
 # Query out the valid values 
@@ -598,6 +600,13 @@ server <- function(input, output) {
      
      amdata
    })
+   
+   #need to be able to calculate hardness from Ca and Mg for Aluminum Criteria
+   hard<-eventReactive(input$goButton,{
+      harddat<-hardness(data())
+      
+      harddat
+   })
 
    ###############################          EXCEL OUTPUT       ##########################################################
    
@@ -902,7 +911,14 @@ server <- function(input, output) {
            writeDataTable(wb,"Ammonia_RPA_Format",x=alk,startRow=4,startCol=22,tableStyle="none")
            writeDataTable(wb,"Ammonia_RPA_Format",x=saltype,startRow=4,startCol=29,tableStyle="none")
                            
-                           }
+       }
+            
+      #Hardness calculations
+      if (nrow(hard())!=0) {addWorksheet(wb,"Calculated Hardness")
+         writeData(wb,"Calculated Hardness",startRow=1,startCol=1,x="Hardness calculated from Calcium and Magnesium or from Specific Conductance")
+         writeData(wb,"Calculated Hardness",startRow=2,startCol=1,x"Hardness is in mg/l")
+         writeData(wb,"Calculated Hardness",startRow=4,startCol=1,x=hard())
+      }
    
      wb
    })
