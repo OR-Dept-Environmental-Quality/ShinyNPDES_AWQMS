@@ -916,7 +916,7 @@ server <- function(input, output) {
       #Hardness calculations
       if (nrow(hard())!=0) {addWorksheet(wb,"Calculated Hardness")
          writeData(wb,"Calculated Hardness",startRow=1,startCol=1,x="Hardness calculated from Calcium and Magnesium or from Specific Conductance")
-         writeData(wb,"Calculated Hardness",startRow=2,startCol=1,x"Hardness is in mg/l")
+         writeData(wb,"Calculated Hardness",startRow=2,startCol=1,x="Hardness is in mg/l")
          writeData(wb,"Calculated Hardness",startRow=4,startCol=1,x=hard())
       }
    
