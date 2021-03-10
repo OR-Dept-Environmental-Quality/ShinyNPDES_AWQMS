@@ -54,6 +54,6 @@ hardness<-function(x){
 
 
 library(AWQMSdata)
-x<-AWQMS_Data(startdate='01-01-2010',char=c("Calcium","Magnesium","Conductance","Specific conductance","Specific conductivity","Conductivity"))
+#x<-AWQMS_Data(startdate='01-01-2010',char=c("Calcium","Magnesium","Conductance","Specific conductance","Specific conductivity","Conductivity"))
 
-try<-hardness(x)
+#try<-hardness(x)
