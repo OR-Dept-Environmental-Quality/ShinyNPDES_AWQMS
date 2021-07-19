@@ -24,8 +24,6 @@ library(DT)
 #attempt to turn off scientific notation
 options(scipen=999)
 
-#in case the shinybusy package needs to be installed/reinstalled
-#remotes::install_github("dreamRs/shinybusy")
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -35,13 +33,15 @@ source("NPDES_AWQMSQuery.R")
 source("NameandFraction.R")
 #function to calculate hardness from Ca and Mg, or conductivity
 source("CalcHardness_Function.R")
+#function to transform Aluminum BLM data (will likely be part of AWQMSdata in future, but not yet)
+source("AlBLM_Transform.R")
 
 
 # Query out the valid values 
 #NPDES only needs a limited # of Chars, this should help speed up the program
 #make it so only the RPA groupings are shown in the drop down
 
-chars <- c("All RPA","Toxics","Copper BLM","pH and Ammonia RPA","DO RPA","None")
+chars <- c("All RPA","Toxics","Copper and Aluminum BLM","pH and Ammonia RPA","DO RPA","None")
 
 #create variables with specific characteristics for the different groups 
 #(note, keeping various groupings for metals, VOCs, base neutrals because they can be easier to update, but will all be 
@@ -50,9 +50,9 @@ chars <- c("All RPA","Toxics","Copper BLM","pH and Ammonia RPA","DO RPA","None")
 #pH and Ammonia RPA (almost the same, ammonia just has the ammonia chars)
 phammrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")
 
-#Copper BLM
+#Copper and Aluminum BLM
 cuB<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
-       "Temperature, water","Total Sulfate","Sulfide","Conductivity","Specific conductance")
+       "Temperature, water","Total Sulfate","Sulfide","Conductivity","Specific conductance", "Aluminum")
 
 #Dissolved Oxygen RPA
 dorpa<-c("Dissolved oxygen (DO)","Dissolved oxygen saturation","Biochemical oxygen demand, non-standard conditions",
@@ -183,7 +183,8 @@ ui <- fluidPage(
                      choices = chars,
                      multiple = FALSE,
                      selected="All RPA"),
-       #specific characteristics outside of groups
+      
+         #specific characteristics outside of groups
          selectizeInput("oneoff",
                         "Specific Characteristics not part of groupings",
                         choices=oneoff,
@@ -302,7 +303,7 @@ server <- function(input, output) {
    
    #build characteristic list
    gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine")),
-                 "Copper BLM"=cuB,   
+                 "Copper and Aluminum BLM"=cuB,   
                  "pH and Ammonia RPA"=phammrpa,
                  "DO RPA"=dorpa,
                  "Toxics"=tox,
@@ -329,7 +330,7 @@ server <- function(input, output) {
    
    mer
    })
-   #if summary statistics are included, create flag showing that continous data is available and remove all data that isn't 7 day avg
+   #if summary statistics are included, create flag showing that continuous data is available and remove all data that isn't 7 day avg
    output$contwar<-renderText({
      warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
      warn
@@ -349,7 +350,7 @@ server <- function(input, output) {
    tsub<-eventReactive(input$goButton,{
      tsub<-select(data(),OrganizationID,Project1,StationDes,MLocID,MonLocType,SampleStartDate,SampleMedia,
                SampleSubmedia,Activity_Type,Statistical_Base,Char_Name,Char_Speciation,
-               Sample_Fraction,CASNumber,Result,Result_Unit,Method_Code,Method_Context,
+               Sample_Fraction,CASNumber,Result_Text,Result_Unit,Method_Code,Method_Context,
                Activity_Comment,Result_Comment,Result_status,Result_Type)
    tsub
    })
@@ -358,7 +359,7 @@ server <- function(input, output) {
    dsub<-eventReactive(input$goButton,{
      dsub<-select(data(),OrganizationID,Org_Name,Project1,act_id,StationDes,MLocID,MonLocType,SampleStartDate,SampleStartTime,SampleMedia,
                  SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
-                 Sample_Fraction,CASNumber,Result,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
+                 Sample_Fraction,CASNumber,Result_Text,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
                  MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
                  Activity_Comment,Result_Comment,Result_status,Result_Type)
      dsub
@@ -408,8 +409,21 @@ server <- function(input, output) {
      cu
    })
    
+   #transform data for Aluminum BLM data
+   aluminum<-eventReactive(input$goButton,{
+      al<-AlBLM(data())
+      
+      #have hardness be calculated when Ca, Mg, or conductivity data are available
+      #need to use original data since AlBLM function messes with characteristic naming conventions
+      hard<-hardness(data())
+      
+      al<-merge(al,hard,by.x=c("MLocID","SampleStartDate"), all.x=TRUE)
+      
+      al
+   })
    
-   #take data, make subtable just for toxics RPA data
+   
+   #take data, make sub-table just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
      
      #only keep characteristics that are in the tox character list
@@ -486,11 +500,11 @@ server <- function(input, output) {
      rpa<-namefrac(rpa)
 
      
-     #change data that is between MDL and MRL to have e infront of result
-     rpa$Result<-ifelse((!is.na(rpa$MDLValue)) & (!is.na(rpa$MRLValue)) 
+     #change data that is between MDL and MRL to have e in front of result
+     rpa$Result_Text<-ifelse((!is.na(rpa$MDLValue)) & (!is.na(rpa$MRLValue)) 
                         & rpa$Result_Numeric<rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue,
-                        paste0("e",rpa$Result),
-                        rpa$Result)
+                        paste0("e",rpa$Result_Text),
+                        rpa$Result_Text)
      
      #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
      #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
@@ -498,7 +512,7 @@ server <- function(input, output) {
      #only take certain rows, change order so that it is more in line with RPA
      rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue),
                  select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
-                              SampleMedia,SampleStartDate,Result,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
+                              SampleMedia,SampleStartDate,Result_Text,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,Result_Type,MLocID,MonLocType,Result_Comment))
 
      
@@ -517,33 +531,35 @@ server <- function(input, output) {
    #RPA summary, this is to help replace the summary stats page in the RPA spreadsheet
    RPAsum<-eventReactive(input$goButton, {
       if (nrow(rpa())!=0){
-         RPAsum<-#rpa()%>%
+         RPAsum<-
             #1,2,4-Trichlorobenzene gets counted twice since it is run as both as part of the volatile and semivolatile suite...
             #for NPDES purposes, only the semi-volatile analyses count, so remove anything done by 624 or 624.1
             subset(rpa(),
-                   subset= (!(Method_Code==c("624 (U.S. Environmental Protection Agency)") & Char_Name==c("1,2,4-Trichlorobenzene"))))%>%
+                   subset= (!((Method_Code==c("624 (U.S. Environmental Protection Agency)")|
+                                  Method_Code==c("624.1 (U.S. Environmental Protection Agency)"))
+                                 & Char_Name==c("1,2,4-Trichlorobenzene"))))%>%
             
             #directions on how to deal with NDs and < taken from RPA IMD Appendix C.
             #for calculating mean, ND=0, between DL and QL=DL
-            mutate(Result_mean = case_when(as.numeric(Result)>=MRLValue ~ as.numeric(Result),
-                                           substr(Result,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
-                                           substr(Result,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
-                                           substr(Result,start=1,stop=1) %in% "<" ~ 0
+            mutate(Result_mean = case_when(as.numeric(Result_Text)>=MRLValue ~ as.numeric(Result_Text),
+                                           substr(Result_Text,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                           substr(Result_Text,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
+                                           substr(Result_Text,start=1,stop=1) %in% "<" ~ 0
             )) %>%
             #for calculating geo mean, ND=1/2DL, but need to be careful for carcinogens- sometimes 1/2 DL is near the  WQ criterion, which can lead to RP when we don't actually know
-            #create column that uses result for caclulating the geo mean
-            mutate(Result_geomean=case_when(as.numeric(Result)>=MRLValue ~ as.numeric(Result),
-                                            substr(Result,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
-                                            substr(Result,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
-                                            substr(Result,start=1,stop=1) %in% "<" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
-                                            substr(Result,start=1,stop=1) %in% "<" & is.na(MDLValue) ~ as.numeric(MRLValue)/2
+            #create column that uses result for caculating the geo mean
+            mutate(Result_geomean=case_when(as.numeric(Result_Text)>=MRLValue ~ as.numeric(Result_Text),
+                                            substr(Result_Text,start=1,stop=1) %in% "e" & !is.na(MDLValue) ~ as.numeric(MDLValue),
+                                            substr(Result_Text,start=1,stop=1) %in% "e" & is.na(MDLValue) ~ as.numeric(MRLValue),
+                                            substr(Result_Text,start=1,stop=1) %in% "<" & !is.na(MDLValue) ~ as.numeric(MDLValue)/2,
+                                            substr(Result_Text,start=1,stop=1) %in% "<" & is.na(MDLValue) ~ as.numeric(MRLValue)/2
                                             
             )) %>%
             group_by(MonLocType,Char_Name)%>%
    
             #do summary stats
             #note that geomean actually will have more logic associated with it for carcinogens...will need to incorporate that
-            summarise(count_all = n(), count_result = sum(!(substr(Result,start=1,stop=1) %in% "<")), average = round(mean(Result_mean, na.rm = TRUE),2),
+            summarise(count_all = n(), count_result = sum(!(substr(Result_Text,start=1,stop=1) %in% "<")), average = round(mean(Result_mean, na.rm = TRUE),2),
                       mn = mean(Result_mean, na.rm = TRUE),
                       stdev = sd(Result_mean, na.rm = T), max = as.character(max(Result_mean, na.rm = TRUE)), 
                       geomean = round(exp(mean(log(Result_geomean))),2)) %>% 
@@ -601,7 +617,7 @@ server <- function(input, output) {
      amdata
    })
    
-   #need to be able to calculate hardness from Ca and Mg for Aluminum Criteria
+   #need to be able to calculate hardness from Ca and Mg for Aluminum Criteria and Toxics RPA
    hard<-eventReactive(input$goButton,{
       harddat<-hardness(data())
       
@@ -857,7 +873,7 @@ server <- function(input, output) {
                                                           
                               
                               #reorder columns for easy copy/paste into Cu BLM tool
-                              copper<-subset(copper,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result",
+                              copper<-subset(copper,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result_Text",
                                                 "MDLValue","MRLValue","Result_Type","Temperature.water","pH","Organic.carbonDissolved","Humic Acid",
                                                 "Calcium","Magnesium","Sodium","Potassium","Sulfate","Chloride",
                                                 "Alkalinity.total","Sulfide","Temperature.water.Result_Type","pH.Result_Type","Organic.carbonDissolved.Result_Type",
@@ -870,25 +886,65 @@ server <- function(input, output) {
                               
                               writeDataTable(wb,"CuBLM_Data_Format",startRow=6,x=copper,tableStyle="none")
                               
-                              }
+       }
+            
+       #Aluminum BLM (copied from CuBLM...need to tweak)
+            if (nrow(aluminum())!=0) {addWorksheet(wb,"AlBLM_Data_Format")
+               writeData(wb,"AlBLM_Data_Format",startRow=1,x="Aluminum BLM data. Examine MLocID for sample location. Examine Result Type columns for data quality")
+               writeData(wb,"AlBLM_Data_Format",startRow=2,x="data has already been converted into proper units for Al BLM analysis (ug/L for Aluminum, mg/L for Hardness). No unit conversion necessary")
+               writeData(wb,"AlBLM_Data_Format",startRow=3,x="Note that if both dissolved and total recoverable aluminum were collected, there will be two rows for each sampling event.")
+               writeData(wb,"AlBLM_Data_Format",startRow=4,x="Calc.Hardness is hardness calculated from calcium and magnesium, or conductivity data and Hardness.Type is how hardness was calculated")
+               
+               #remove date column, overkill
+               aluminum<-within(aluminum(),rm("date"))
+               
+               #fix names to remove spaces and commas
+               names(aluminum)<-str_replace_all(names(aluminum), c(" " = "." , "," = "" ))
+               
+               
+               #make sure all columns are there for each parameter (add as NA if there is no data)
+               aluminum<-if(!("pH" %in% colnames(aluminum))){add_column(aluminum, "pH"=NA)} else {aluminum}
+               aluminum<-if(!("Hardness.Ca.Mg" %in% colnames(aluminum))){add_column(aluminum, "Hardness.Ca.Mg"=NA)} else {aluminum}
+               aluminum<-if(!("Organic.carbonDissolved" %in% colnames(aluminum))){add_column(aluminum, "Organic.carbonDissolved"=NA)} else {aluminum}
+          
+               
+               #Same for result type
+               
+               aluminum<-if(!("pH.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "pH.Result_Type"=NA)} else {aluminum}
+               aluminum<-if(!("Hardness.Ca.Mg.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "Hardness.Ca.Mg.Result_Type"=NA)} else {aluminum}
+               aluminum<-if(!("Organic.carbonDissolved.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "Organic.carbonDissolved.Result_Type"=NA)} else {aluminum}
+
+               #reorder columns for easy copy/paste into Cu BLM tool
+               aluminum<-subset(aluminum,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result_Text",
+                                              "MDLValue","MRLValue","Result_Type","Organic.carbonDissolved", "Hardness.Ca.Mg","pH","Calc.Hardness",
+                                              "Organic.carbonDissolved.Result_Type","Hardness.Ca.Mg.Result_Type","pH.Result_Type","Hardness.Type"
+                                              ))
+               
+               #need to reformat the columns so that they come through as numbers
+               
+               
+               writeDataTable(wb,"AlBLM_Data_Format",startRow=6,x=aluminum,tableStyle="none")
+               
+            }
+            
        #Ammonia RPA                     
        if (nrow(amm())!=0) {addWorksheet(wb,"Ammonia_RPA_Format")
            
            #get ammonia data
            amm<-subset(amm(),Char_Name %in% c("Ammonia","Ammonia-nitrogen","Ammonia and ammonium"), 
-                       select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+                       select=c("act_id","MLocID","SampleStartDate","Result_Text","Result_Unit","Result_Type"))
            
            #Temperature data
            temp<-subset(amm(),Char_Name=="Temperature, water",
-                        select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+                        select=c("act_id","MLocID","SampleStartDate","Result_Text","Result_Unit","Result_Type"))
            
            #pH
            ph<-subset(amm(),Char_Name=="pH",
-                      select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))  
+                      select=c("act_id","MLocID","SampleStartDate","Result_Text","Result_Unit","Result_Type"))  
            
            #Alkalinity
            alk<-subset(amm(),Char_Name=="Alkalinity, total",
-                       select=c("act_id","MLocID","SampleStartDate","Result","Result_Unit","Result_Type"))
+                       select=c("act_id","MLocID","SampleStartDate","Result_Text","Result_Unit","Result_Type"))
            
            #get salinity data for avg salinity
            sal<-subset(amm(),Char_Name=="Salinity")
