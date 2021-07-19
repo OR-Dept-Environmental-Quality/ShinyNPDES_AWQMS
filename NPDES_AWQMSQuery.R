@@ -19,7 +19,7 @@ NPDES_AWQMS_Qry<-function
   query <- "SELECT OrganizationID,Org_Name,Project1,StationDes, MLocID,Lat_DD,Long_DD,MonLocType,HUC8,
   HUC8_Name,AU_ID,act_id,SampleStartDate,SampleStartTime,SampleMedia,
   SampleSubmedia,SamplingMethod,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
-  Sample_Fraction,CASNumber,Result,Result_Numeric,Result_Operator,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
+  Sample_Fraction,CASNumber,Result_Text,Result_Numeric,Result_Operator,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
   MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,Activity_Comment,Result_Comment,Result_status,Result_Type,Result_UID\n  
   FROM [awqms].[dbo].[VW_AWQMS_Results]\n  
   WHERE SampleStartDate >= Convert(datetime, {startdate})"
@@ -68,7 +68,7 @@ NPDES_AWQMS_Qry<-function
 }
 
 
-#data<-NPDES_AWQMS_Qry(startdate='2000-01-01',enddate='2018-12-27')
+#data<-NPDES_AWQMS_Qry(startdate='2019-01-01',enddate='2020-12-27',org='GP-WM(NOSTORETID)')
 
 
 #####create function like AWQMS_Stations but only pulls desired station types 
