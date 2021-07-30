@@ -20,6 +20,7 @@ library(openxlsx)
 library(tidyr)
 library(tidyverse)
 library(DT)
+library(plyr,include.only = "rbind.fill")
 
 #attempt to turn off scientific notation
 options(scipen=999)
@@ -35,6 +36,8 @@ source("NameandFraction.R")
 source("CalcHardness_Function.R")
 #function to transform Aluminum BLM data (will likely be part of AWQMSdata in future, but not yet)
 source("AlBLM_Transform.R")
+#function to calculate summary stats from continuous data
+source("Continuous_Summary_Function.R")
 
 
 # Query out the valid values 
@@ -487,6 +490,12 @@ server <- function(input, output, session) {
       al
    })
    
+   #calculate summary stats from continuous data
+   contsumstat<-eventReactive(input$goButton, {
+      stats<-contsum(cont())
+      
+      stats
+   })
    
    #take data, make sub-table just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
@@ -503,11 +512,46 @@ server <- function(input, output, session) {
      #checked AWQMS database, all alkalinity is reported in mg/l or mg/l CaCO3, no need for conversion
      #get list of char names in RPA
      names<-unique(rpa$Char_Name)
-     #remove alkalinity and harndess, those needs to stay as mg/l
+     #remove alkalinity and hardness, those needs to stay as mg/l
      names<-names[!(names %in% c("Alkalinity, total","Hardness, Ca, Mg"))]
-    
+     
+     #make sure hardness and alkalinity are in mg/l (occasionally is in ug/l)
+     rpa<-unit_conv(rpa,c("Alkalinity, total","Hardness, Ca, Mg"),"ug/l",'mg/l')
+     
+     #convert everything else to ug/l
      rpa<-unit_conv(rpa,names,"mg/l","ug/l")
      rpa<-unit_conv(rpa,names,"ng/l","ug/l")
+     
+     
+     #1,3-dichloropropene is almost always reported as cis and trans isomers. Add them together and fix CAS
+     dich<-rpa %>%
+        subset(Char_Name %in% c("cis-1,3-Dichloropropene","trans-1,3-Dichloropropene") & Result_Type %in% "Actual") %>%
+        group_by(OrganizationID,SampleStartDate,SampleStartTime,MLocID,StationDes,MonLocType,SampleMedia,SampleSubmedia) %>%
+        summarise(
+           Result_Text= ifelse((substr(Result_Text,start=1,stop=1) %in% "<"),
+                               Result_Numeric,
+                               sum(Result_Numeric)),
+           Result_Numeric=Result_Text,
+           Char_Name = "1,3-Dichloropropene",
+           CASNumber = "542756",
+           MRLValue = mean(MRLValue),
+           MDLValue = mean(MDLValue),
+           Result_Type="Calculated",
+           Result_Unit='ug/l',
+           Method_Code="Calculated",
+           Activity_Type="Calculated",
+           Analytical_Lab="Calculated from isomer data"
+        )
+     
+     #need to add in < if applicable
+     dich$Result_Text<-ifelse(((!is.na(dich$MRLValue))|!(is.na(dich$MDLValue))) & 
+                                 (dich$Result_Numeric==dich$MRLValue | dich$Result_Numeric==dich$MDLValue),
+                              paste0("<",dich$Result_Text),dich$Result_Text)
+     #get unique values
+     dich<-unique(dich)
+     
+     #bind new rows to RPA dataframe
+     rpa<-rbind.fill(rpa,dich)
      
      #add T, D, or I to CAS# for certain parameters (mostly metals, used RPA workbook to identify parameters) 
      #so that the RPA workbooks will recognize them
@@ -559,6 +603,16 @@ server <- function(input, output, session) {
      #same for total phenolic compounds
      rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Phenols"),
                            paste0("PHENOLICS"),
+                           rpa$CASNumber)
+     
+     #there has been confusion in the CAS #s for Bis(2-chloroisopropyl) ether and Bis(2-chloro-1-methylethyl) ether. 
+     #they are distinct but structurally similar chemicals. The name Bis(2-chloroisopropyl) ether has been used to refer to 
+     #chemicals under both CAS 108-60-1 and 39638-32-9. 108-60-1 is the correct CAS according to EPA. 
+     #AWQMS has Bis(2-chloroisopropyl) ether listed with CAS # 39638-32-9
+     #changing the CAS # back for RPA purposes 
+     #(source: Clarification of the relationship between bis(2-chloro-1-methylethyl) ether (CASRM 108-60-1) and bis(2-chloroisopropyl) ether, EPA September 2016)
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Bis(2-chloroisopropyl) ether"),
+                           paste0("108601"),
                            rpa$CASNumber)
      
      #combine Char_Name and Sample_Fraction for just metals
@@ -786,7 +840,16 @@ server <- function(input, output, session) {
        {addWorksheet(wb,"Map") 
         
        #create map with limited labels
-       map<-leaflet(data()) %>%
+          
+          #need to combine information from grab and continuous data if we're going to get the map to work
+          #take both datasets and subset so they have the same basic columns
+          subdat<-select(data(),MLocID,StationDes,type,Long_DD,Lat_DD)
+          subcont<-select(cont(),MLocID,StationDes,type,Long_DD,Lat_DD)
+          
+          #combine dataframes and get unique values
+          comb<-unique(rbind(subdat,subcont))
+          
+       map<-leaflet(comb) %>%
          addTiles()%>%
          addMarkers(lng=~Long_DD,
                     lat=~Lat_DD,
@@ -836,6 +899,13 @@ server <- function(input, output, session) {
                              writeDataTable(wb,"Continuous Data",x=dcont(),tableStyle="none")
        }
       
+       #summary of continuous data
+       if(nrow(contsumstat())!=0) {addWorksheet(wb,"Continuous Summary Stats")
+                                   writeData (wb,"Continuous Summary Stats",startRow=1,x="Summary Statistics Calculated from Continuous data")
+                                   writeData (wb,"Continuous Summary Stats",startRow=2,x="Summary Statistics include the daily maximum, daily minimum, daily average, the number of observations per day, the 7 day average of the daily maximum, and the 60 day average of the daily maximum")
+                                   writeData (wb,"Continuous Summary Stats",startRow=3,x="The 7 and 60 day average are calculated with using the 7 day or 60 days preceeding (aka 'right adjusted'). This is consistent with the Integrated Report.")
+                                   writeData (wb,"Continuous Summary Stats",startRow=4,x="ninetyninth column is the 99th percentile of the daily temperature data, it is included as a check to ensure that the daily maximum is not an outlier")
+                                   writeDataTable(wb,"Continuous Summary Stats", startRow=6, x=contsumstat(),tableStyle="none")}
               
        #RPA          
        if (nrow(rpa())!=0) {addWorksheet(wb,"Toxics_Data_Format")
