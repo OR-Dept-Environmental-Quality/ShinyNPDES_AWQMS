@@ -6,7 +6,7 @@
 #'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
 #'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
 #'River/Stream Perennial', 'BEACH Program Site-Estuary'
-# in additon, the query is set up so that no rejected data is returned
+# in addition, the query is set up so that no rejected data is returned
 
 NPDES_AWQMS_Qry<-function 
 (startdate = "2000-01-01", enddate = NULL, station = NULL, project=NULL, montype = NULL, char = NULL, org = NULL, 
