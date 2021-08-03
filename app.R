@@ -9,6 +9,7 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 library(leaflet)
+library(plyr,include.only = "rbind.fill")
 library(dplyr)
 library(xlsxjars)
 library(mapview)
@@ -20,15 +21,17 @@ library(openxlsx)
 library(tidyr)
 library(tidyverse)
 library(DT)
-library(plyr,include.only = "rbind.fill")
+
+
 
 #attempt to turn off scientific notation
 options(scipen=999)
 
+print("Now loading sourced functions.")
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
-#the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types
+#the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types and no rejected data
 source("NPDES_AWQMSQuery.R")
 #function to combine characteristic name and sample fraction for metals
 source("NameandFraction.R")
@@ -39,6 +42,7 @@ source("AlBLM_Transform.R")
 #function to calculate summary stats from continuous data
 source("Continuous_Summary_Function.R")
 
+print("Now loading valid values")
 
 # Query out the valid values 
 #NPDES only needs a limited # of Chars, this should help speed up the program
@@ -97,7 +101,7 @@ vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane",
 metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
              "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
              "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
-             "Hardness, carbonate","Hardness, non-carbonate","Ammonia","Ammonia and ammonium","Ammonia-nitrogen","Methylmercury(1+)")
+             "Hardness, carbonate","Hardness, non-carbonate","Methylmercury(1+)")
 
 #all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - adding some of the "other parameters with state WQ crit" 
 tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
@@ -106,6 +110,9 @@ tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
 oneoff<-base::unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
                  "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
                  "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
+
+
+print("Now loading query cache")
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -124,8 +131,6 @@ station <- sort(station)
 organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- sort(organization)
-
-
 
 #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
 save(station, Mtype, auid, organization, file = 'query_cache.RData')
@@ -501,12 +506,16 @@ server <- function(input, output, session) {
    rpa<-eventReactive(input$goButton,{
      
      #only keep characteristics that are in the tox character list
-
      rpa<-subset(data(),(Char_Name %in% tox))
     
      if (nrow(rpa)!=0){
        #combine method_code and method_Context columns
      rpa$Method_Code<-paste0(rpa$Method_Code," (",rpa$Method_Context,")")
+     
+     #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
+     #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
+     #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
+     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue))
 
      #need to do unit conversions, al in ug/l, except for Alkalinity, which should be in mg/L
      #checked AWQMS database, all alkalinity is reported in mg/l or mg/l CaCO3, no need for conversion
@@ -525,7 +534,7 @@ server <- function(input, output, session) {
      
      #1,3-dichloropropene is almost always reported as cis and trans isomers. Add them together and fix CAS
      dich<-rpa %>%
-        subset(Char_Name %in% c("cis-1,3-Dichloropropene","trans-1,3-Dichloropropene") & Result_Type %in% "Actual") %>%
+        subset(Char_Name %in% c("cis-1,3-Dichloropropene","trans-1,3-Dichloropropene")) %>%
         group_by(OrganizationID,SampleStartDate,SampleStartTime,MLocID,StationDes,MonLocType,SampleMedia,SampleSubmedia) %>%
         summarise(
            Result_Text= ifelse((substr(Result_Text,start=1,stop=1) %in% "<"),
@@ -540,18 +549,77 @@ server <- function(input, output, session) {
            Result_Unit='ug/l',
            Method_Code="Calculated",
            Activity_Type="Calculated",
-           Analytical_Lab="Calculated from isomer data"
-        )
+           Analytical_Lab="Calculated from isomer data") %>%
+        unique()
      
      #need to add in < if applicable
      dich$Result_Text<-ifelse(((!is.na(dich$MRLValue))|!(is.na(dich$MDLValue))) & 
                                  (dich$Result_Numeric==dich$MRLValue | dich$Result_Numeric==dich$MDLValue),
                               paste0("<",dich$Result_Text),dich$Result_Text)
-     #get unique values
-     dich<-unique(dich)
-     
+
      #bind new rows to RPA dataframe
      rpa<-rbind.fill(rpa,dich)
+     
+     
+     #issues with permittees submitting discrete grabs instead of composites, need to combine samples that should have been composited or else the 
+     #rpa tool counts each discrete grab as it's own sample, thus inflating the sample count.
+     
+     #add yearmonth column here
+     #note that this strips out the day in order to work since some 24 hr samples are across 2 days. 
+     #However, I haven't seen a case yet where a permittee samples on the last day of the month and goes into the next month, so I think this should be fine
+     rpa<-rpa%>%
+        mutate(YearMonth=format(as.Date(SampleStartDate),"%Y-%m"))
+        
+        ##two part grouping - first get a count of all samples taken on a particular day for a particular analyte, label these as "Yes" in a column called multiple
+        count<-rpa %>%
+        group_by(OrganizationID,MLocID,SampleSubmedia,SampleStartDate,Char_Name,Sample_Fraction) %>%
+        summarise(
+           count_samples = n())
+     
+     #then merge this back into the main dataset
+     rpa2<-merge(rpa,count,by=c('OrganizationID','MLocID','SampleSubmedia','SampleStartDate','Char_Name','Sample_Fraction')) %>%
+        mutate(Multiple=ifelse(count_samples>1,"Yes","No"))
+     
+     #then regroup the data and include the count as a grouping
+     #note that the code assumes that any NDs are equal to the MRL/MDL that was reported for the purpose of averaging the results
+     all<-rpa2 %>%
+        group_by(OrganizationID,MLocID,StationDes,MonLocType,SampleMedia,SampleSubmedia,Char_Name,Sample_Fraction,CASNumber,YearMonth,Multiple) %>%
+        summarise(
+           Result_Text= mean(Result_Numeric),
+           Result_Numeric=Result_Text,
+           MRLValue = mean(MRLValue),
+           MDLValue = mean(MDLValue),
+           Result_Type="Calculated",
+           Result_Unit='ug/l',
+           Method_Code="Calculated",
+           Activity_Type="Calculated",
+           Analytical_Lab="Calculated from multiple samples (usually multiple discrete grabs)"
+        ) %>%
+        unique()
+     
+     
+     #need to add in < if applicable
+     all$Result_Text<-ifelse(((!is.na(all$MRLValue))|!(is.na(all$MDLValue))) & 
+                                (all$Result_Numeric==all$MRLValue | all$Result_Numeric==all$MDLValue),
+                             paste0("<",all$Result_Text),all$Result_Text)
+     
+     
+     #Remove the multiple samples from the rpa dataset and add in the calculated data
+     #get char names for multiple counts
+     multname<-all%>%
+        subset(Multiple=="Yes", select=c(OrganizationID,YearMonth,MLocID,StationDes,MonLocType,
+                                         SampleMedia,SampleSubmedia,Char_Name,Sample_Fraction,CASNumber))
+     
+     #only take rows that aren't in multname
+     rpa<-anti_join(rpa,multname,by=c('OrganizationID','YearMonth','MLocID','Char_Name','Sample_Fraction','SampleSubmedia'))
+     
+     #bind in calculated data where count>1
+     rpa<-rbind.fill(rpa,subset(all,Multiple=="Yes"))
+     
+     #add in YearMonth as SampleStartDate for calculated data so that we have a way to track when samples were taken,
+     #transform the non "YearMonth" dates into a format excel can recognize
+     rpa<-rpa %>%
+        mutate(SampleStartDate = ifelse(!(is.na(Multiple)),YearMonth,format(as.Date(SampleStartDate),"%m/%d/%Y")))
      
      #add T, D, or I to CAS# for certain parameters (mostly metals, used RPA workbook to identify parameters) 
      #so that the RPA workbooks will recognize them
@@ -617,7 +685,6 @@ server <- function(input, output, session) {
      
      #combine Char_Name and Sample_Fraction for just metals
      rpa<-namefrac(rpa)
-
      
      #change data that is between MDL and MRL to have e in front of result
      rpa$Result_Text<-ifelse((!is.na(rpa$MDLValue)) & (!is.na(rpa$MRLValue)) 
@@ -625,22 +692,14 @@ server <- function(input, output, session) {
                         paste0("e",rpa$Result_Text),
                         rpa$Result_Text)
      
-     #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
-     #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
-     #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
      #only take certain rows, change order so that it is more in line with RPA
-     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue),
-                 select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
+     rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result_Text,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,Result_Type,MLocID,MonLocType,Result_Comment))
-
      
      #need to remove dashes from CASNumber row
      rpa$CASNumber<-gsub("-","",rpa$CASNumber)
      
-     #need to transform date so excel recognizes it as a date
-     rpa$SampleStartDate<-as.Date(rpa$SampleStartDate)
-     rpa$SampleStartDate<-format(rpa$SampleStartDate, "%m/%d/%Y")
      
      }
      return(rpa)
