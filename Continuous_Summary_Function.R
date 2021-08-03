@@ -10,10 +10,10 @@ contsum<-function(x,days=NULL) {
   #calculate daily 
   dstats<-x %>%
     group_by(MLocID,Result_Date,Char_Name) %>%
-    summarise(max=max(Result_Numeric),min=min(Result_Numeric),average=mean(Result_Numeric),ninetyninth=quantile(Result_Numeric,probs=.99, na.rm=TRUE),observations=n())
+    summarise(max=max(Result_Numeric),min=min(Result_Numeric),average=mean(Result_Numeric),ninetyfifth=quantile(Result_Numeric,probs=.95, na.rm=TRUE),observations=n())
   
   #rename column names so that they make more sense
-  names(dstats)[names(dstats)=="ninetyninth"]<-'99th%ile'
+  names(dstats)[names(dstats)=="ninetyfifth"]<-'95th%ile'
   #calculate 7 day rolling average of the maximum, use right adjustment (so it takes the 7 days prior)
   SevenD<-dstats%>%
     dplyr::group_by(MLocID,Char_Name)%>%
