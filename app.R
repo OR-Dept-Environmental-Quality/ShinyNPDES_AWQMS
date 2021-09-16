@@ -9,6 +9,7 @@ print("Initial data queries may take a few minutes.")
 library(shiny)
 library(AWQMSdata)
 library(leaflet)
+library(plyr,include.only = "rbind.fill")
 library(dplyr)
 library(xlsxjars)
 library(mapview)
@@ -21,13 +22,16 @@ library(tidyr)
 library(tidyverse)
 library(DT)
 
+
+
 #attempt to turn off scientific notation
 options(scipen=999)
 
+print("Now loading sourced functions.")
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
-#the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types
+#the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types and no rejected data
 source("NPDES_AWQMSQuery.R")
 #function to combine characteristic name and sample fraction for metals
 source("NameandFraction.R")
@@ -35,7 +39,10 @@ source("NameandFraction.R")
 source("CalcHardness_Function.R")
 #function to transform Aluminum BLM data (will likely be part of AWQMSdata in future, but not yet)
 source("AlBLM_Transform.R")
+#function to calculate summary stats from continuous data
+source("Continuous_Summary_Function.R")
 
+print("Now loading valid values")
 
 # Query out the valid values 
 #NPDES only needs a limited # of Chars, this should help speed up the program
@@ -94,7 +101,7 @@ vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane",
 metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
              "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
              "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
-             "Hardness, carbonate","Hardness, non-carbonate","Ammonia","Ammonia and ammonium","Ammonia-nitrogen","Methylmercury(1+)")
+             "Hardness, carbonate","Hardness, non-carbonate","Methylmercury(1+)")
 
 #all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - adding some of the "other parameters with state WQ crit" 
 tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
@@ -103,6 +110,9 @@ tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
 oneoff<-base::unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
                  "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
                  "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
+
+
+print("Now loading query cache")
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -121,8 +131,6 @@ station <- sort(station)
 organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- sort(organization)
-
-
 
 #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
 save(station, Mtype, auid, organization, file = 'query_cache.RData')
@@ -190,16 +198,16 @@ ui <- fluidPage(
                         choices=oneoff,
                         multiple=TRUE),
 
-       # Monitoring locations 
+       # Monitoring locations, choices is NULL so that server-side selectize can be used to improve performance 
         selectizeInput("monlocs",
                         "Select Monitoring Locations",
-                        choices = station,
+                        choices = NULL,
                         multiple = TRUE),
        
-       # Monitoring location types
+       # Monitoring location types, choices is NULL so that server-side selectize can be used to improve performance 
         selectizeInput("montype",
                        "Select Monitoring Location Types",
-                       choices=Mtype,
+                       choices=NULL,
                        multiple=TRUE),
        
        #add warning
@@ -211,10 +219,10 @@ ui <- fluidPage(
                        choices = HUC8_Names,
                        multiple = TRUE),
        
-       #AU_IDs
+       #AU_IDs, choices is NULL so that server-side selectize can be used to improve performance 
        selectizeInput("AUID",
                       "Select Assessment Unit",
-                      choices = auid,
+                      choices = NULL,
                       multiple = TRUE),
     
        #Orgs
@@ -272,8 +280,11 @@ ui <- fluidPage(
                  ),
         
         #Data table
-        tabPanel("Table",
+        tabPanel("Grab Data",
                  DT::dataTableOutput("table")),
+        #Continuous Data table
+        tabPanel("Continuous Data",
+                 DT::dataTableOutput("continuous")),
         #add leaflet map
         tabPanel("Map",leafletOutput("locs")),
         #check diagnositcs
@@ -289,32 +300,41 @@ add_busy_spinner(spin = "fading-circle"))
 ###############################################  SERVER    ###########################################################
 
 # Define server logic required to display query
-server <- function(input, output) {
+server <- function(input, output, session) {
   
+   #to help increase app performance, need to use server-side selectize for monlocs, montype, and AUID
    
-   #have to make dates into strings, otherwise they come out as funny numbers
-   #all other variables are reactive 'as is'
+   updateSelectizeInput(session, 'monlocs', choices = station, server = TRUE)
+   updateSelectizeInput(session, 'montype', choices = Mtype, server = TRUE)
+   updateSelectizeInput(session, 'AUID', choices = auid, server = TRUE)
+   
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
-
-   orig<-eventReactive(input$goButton,{
+   
+   #get grab data
+   data<-eventReactive(input$goButton,{
      
-   rstdt<-toString(sprintf("%s",input$startd))
-   rendd<-toString(sprintf("%s",input$endd))
    
-   #build characteristic list
-   gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine")),
-                 "Copper and Aluminum BLM"=cuB,   
-                 "pH and Ammonia RPA"=phammrpa,
-                 "DO RPA"=dorpa,
-                 "Toxics"=tox,
-                 "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
-   one<-c(input$oneoff)
-   rchar<-c(gch,one)
+   #fix some of the inputs
+      gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine","Flow")),
+                  "Copper and Aluminum BLM"=cuB,   
+                  "pH and Ammonia RPA"=phammrpa,
+                  "DO RPA"=dorpa,
+                  "Toxics"=tox,
+                  "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
+      one<-c(input$oneoff)
+      rchar<-c(gch,one)
+      
+      #query the data
+      dat<-NPDES_AWQMS_Qry(startdate=toString(sprintf("%s",input$startd)),toString(sprintf("%s",input$endd)),station=c(input$monlocs),montype=c(input$montype),
+                  char=rchar,org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID))
    
-   #actual query for data
-   dat<-NPDES_AWQMS_Qry(startdate=rstdt,enddate=rendd,station=c(input$monlocs),montype=c(input$montype),
-                  char=c(rchar),org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID))
    
+   #remove summary stats that are not 7 day avg, also check for and remove non-UTF8 characteristics from result_comment column
+   #(which can prevent final excel download from opening)
+   
+   dat<-if(input$Summary){dat} else  {subset(dat,is.na(dat$Time_Basis)|dat$Time_Basis %in% "7DADMean")}
+   
+   dat$Result_Comment<-iconv(dat$Result_Comment,"UTF-8","UTF-8",sub='')
    
    #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
    #in data() and add a column that has all characteristic names for each monitoring location....
@@ -330,20 +350,53 @@ server <- function(input, output) {
    
    mer
    })
-   #if summary statistics are included, create flag showing that continuous data is available and remove all data that isn't 7 day avg
-   output$contwar<-renderText({
-     warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
-     warn
-   })
    
-   #remove summary stats that are not 7 day avg, also check for and remove non-UTF8 characteristics from result_comment column
+   #if summary statistics are included, create flag showing that continuous data is available and remove all data that isn't 7 day avg
+   #output$contwar<-renderText({
+    # warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
+    # warn
+   #})
+   
+   
+   #query for continuous data
+   cont<-eventReactive(input$goButton, {
+   
+      
+   #query for continuous data - note that we are not including rejected or unreviewed data,
+   #also, we only want temperature, pH, conductivity, salinity, and DO data, 
+      #fix some of the inputs
+      gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine","Flow")),
+                  "Copper and Aluminum BLM"=cuB,   
+                  "pH and Ammonia RPA"=phammrpa,
+                  "DO RPA"=dorpa,
+                  "Toxics"=tox,
+                  "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
+      one<-c(input$oneoff)
+      rchar<-c(gch,one)
+      
+   dat<-AWQMS_Data_Cont(startdate=toString(sprintf("%s",input$startd)),toString(sprintf("%s",input$endd)),
+                        station=c(input$monlocs),char=rchar,
+                        org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID), 
+                        Result_Status=c("Accepted","Final","Validated","Preliminary","Provisional"))
+   
+   #remove non-UTF8 characteristics from comments column
    #(which can prevent final excel download from opening)
-   data<-eventReactive(input$goButton,{
-     dat<-if(input$Summary){orig()} else {subset(orig(),is.na(orig()$Time_Basis)|orig()$Time_Basis %in% "7DADMean")}
-     
-     dat$Result_Comment<-iconv(dat$Result_Comment,"UTF-8","UTF-8",sub='')
-     
-     dat
+   
+   dat$Comments<-iconv(dat$Comments,"UTF-8","UTF-8",sub='')
+   
+   #want to add list of characteristics for each monitoring location to the leaflet popup, to do that we're going to have to pull 
+   #in data() and add a column that has all characteristic names for each monitoring location....
+   #if I just add data$char_Names I only get the first char (usually temperature, water)
+   #able fix this by grouping via MLocID, then getting the unique chars via summarize
+   #then merge the two dataframes together using MLocID, creates column called "type" that has chars
+   grp<-dat %>% group_by(MLocID) %>% 
+      summarize(type = paste(sort(unique(Char_Name)),collapse=", "))
+   
+   #merge 
+   
+   mer<-merge(dat,grp, by="MLocID")
+   
+   mer
    })
    
    #take data, make a subtable for VIEWING in the shiny app so it only shows desired columns from the AWQMS pull in desired order
@@ -355,14 +408,30 @@ server <- function(input, output) {
    tsub
    })
    
+   #table to view continuous data
+   tcont<-eventReactive(input$goButton,{
+      tcont<-select(cont(),OrganizationID,StationDes,MLocID,MonLocType,Char_Name, Depth, Depth_Unit,
+                     Result_Date,Result_Time,Result_Numeric,Result_Unit,Result_Status,Comments)
+      tcont
+   })
+   
    #take data, make a subtable for DOWNLOAD so that we only show the desired columns from the AWQMS data pull and in the desired order
    dsub<-eventReactive(input$goButton,{
-     dsub<-select(data(),OrganizationID,Org_Name,Project1,act_id,StationDes,MLocID,MonLocType,SampleStartDate,SampleStartTime,SampleMedia,
-                 SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
+     dsub<-select(data(),OrganizationID,Org_Name,Project1,act_id,StationDes,MLocID,MonLocType,Lat_DD,Long_DD,AU_ID,
+                  SampleStartDate,SampleStartTime,SampleMedia,SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
                  Sample_Fraction,CASNumber,Result_Text,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
                  MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
                  Activity_Comment,Result_Comment,Result_status,Result_Type)
      dsub
+   })
+   
+   #download for continuous data
+   dcont<-eventReactive(input$goButton,{
+      dcont<-select(cont(), OrganizationID,org_name,StationDes,MonLocType,HUC8_Name,HUC12_Name,Lat_DD,Long_DD,AU_ID,Equipment_ID,
+                    Media,Sub_Media,Result_Date,Result_Time,Time_Zone,Char_Name,Result_Numeric,Operator,Result_Unit,Result_Status,
+                    DQL,Depth,Depth_Unit,Comments)
+      
+      dcont
    })
    
    #table of queried data for Shiny app view  
@@ -371,15 +440,29 @@ server <- function(input, output) {
      tsub()
    })
    
+   #table of queried continouous data for Shiny app view
+   output$continuous<-renderDataTable({
+      tcont()
+   })
+   
    #leaflet map
    mymap<- eventReactive(input$goButton,{   
-     leaflet(data()) %>%
+      #need to combine information from grab and continuous data if we're going to get the map to work
+      #take both datasets and subset so they have the same basic columns
+      subdat<-select(data(),MLocID,StationDes,type,Long_DD,Lat_DD)
+      subcont<-select(cont(),MLocID,StationDes,type,Long_DD,Lat_DD)
+      
+      #combine dataframes and get unique values
+      comb<-unique(rbind(subdat,subcont))
+      
+      #create map
+     leaflet(comb) %>%
        addTiles()%>%
        addMarkers(lng=~Long_DD,
                   lat=~Lat_DD,
-                  popup=paste("Station ID: ",data()$MLocID,"<br>",
-                              "Description: ",data()$StationDes,"<br>",
-                              "Characteristics: ",data()$type,"<br>"),
+                  popup=paste("Station ID: ",comb$MLocID,"<br>",
+                              "Description: ",comb$StationDes,"<br>",
+                              "Characteristics: ",comb$type,"<br>"),
                   popupOptions= popupOptions(maxHeight = 75)) %>%
        #want to be able to select points on map via polygon.
        #first step is to be able to draw polygon on map
@@ -422,27 +505,131 @@ server <- function(input, output) {
       al
    })
    
+   #calculate summary stats from continuous data
+   contsumstat<-eventReactive(input$goButton, {
+      stats<-contsum(cont())
+      
+      stats
+   })
    
    #take data, make sub-table just for toxics RPA data
    rpa<-eventReactive(input$goButton,{
      
      #only keep characteristics that are in the tox character list
-
      rpa<-subset(data(),(Char_Name %in% tox))
     
      if (nrow(rpa)!=0){
        #combine method_code and method_Context columns
      rpa$Method_Code<-paste0(rpa$Method_Code," (",rpa$Method_Context,")")
+     
+     #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
+     #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
+     #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
+     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue))
 
      #need to do unit conversions, al in ug/l, except for Alkalinity, which should be in mg/L
      #checked AWQMS database, all alkalinity is reported in mg/l or mg/l CaCO3, no need for conversion
      #get list of char names in RPA
      names<-unique(rpa$Char_Name)
-     #remove alkalinity and harndess, those needs to stay as mg/l
+     #remove alkalinity and hardness, those needs to stay as mg/l
      names<-names[!(names %in% c("Alkalinity, total","Hardness, Ca, Mg"))]
-    
+     
+     #make sure hardness and alkalinity are in mg/l (occasionally is in ug/l)
+     rpa<-unit_conv(rpa,c("Alkalinity, total","Hardness, Ca, Mg"),"ug/l",'mg/l')
+     
+     #convert everything else to ug/l
      rpa<-unit_conv(rpa,names,"mg/l","ug/l")
      rpa<-unit_conv(rpa,names,"ng/l","ug/l")
+     
+     
+     #1,3-dichloropropene is almost always reported as cis and trans isomers. Add them together and fix CAS
+     dich<-rpa %>%
+        subset(Char_Name %in% c("cis-1,3-Dichloropropene","trans-1,3-Dichloropropene")) %>%
+        group_by(OrganizationID,SampleStartDate,SampleStartTime,MLocID,StationDes,MonLocType,SampleMedia,SampleSubmedia) %>%
+        summarise(
+           Result_Text= ifelse((substr(Result_Text,start=1,stop=1) %in% "<"),
+                               Result_Numeric,
+                               sum(Result_Numeric)),
+           Result_Numeric=Result_Text,
+           Char_Name = "1,3-Dichloropropene",
+           CASNumber = "542756",
+           MRLValue = mean(MRLValue),
+           MDLValue = mean(MDLValue),
+           Result_Type="Calculated",
+           Result_Unit='ug/l',
+           Method_Code="Calculated",
+           Activity_Type="Calculated",
+           Analytical_Lab="Calculated from isomer data") %>%
+        unique()
+     
+     #need to add in < if applicable
+     dich$Result_Text<-ifelse(((!is.na(dich$MRLValue))|!(is.na(dich$MDLValue))) & 
+                                 (dich$Result_Numeric==dich$MRLValue | dich$Result_Numeric==dich$MDLValue),
+                              paste0("<",dich$Result_Text),dich$Result_Text)
+
+     #bind new rows to RPA dataframe
+     rpa<-rbind.fill(rpa,dich)
+     
+     
+     #issues with permittees submitting discrete grabs instead of composites, need to combine samples that should have been composited or else the 
+     #rpa tool counts each discrete grab as it's own sample, thus inflating the sample count.
+     
+     #add yearmonth column here
+     #note that this strips out the day in order to work since some 24 hr samples are across 2 days. 
+     #However, I haven't seen a case yet where a permittee samples on the last day of the month and goes into the next month, so I think this should be fine
+     rpa<-rpa%>%
+        mutate(YearMonth=format(as.Date(SampleStartDate),"%Y-%m"))
+        
+        ##two part grouping - first get a count of all samples taken on a particular day for a particular analyte, label these as "Yes" in a column called multiple
+        count<-rpa %>%
+        group_by(OrganizationID,MLocID,SampleSubmedia,SampleStartDate,Char_Name,Sample_Fraction) %>%
+        summarise(
+           count_samples = n())
+     
+     #then merge this back into the main dataset
+     rpa2<-merge(rpa,count,by=c('OrganizationID','MLocID','SampleSubmedia','SampleStartDate','Char_Name','Sample_Fraction')) %>%
+        mutate(Multiple=ifelse(count_samples>1,"Yes","No"))
+     
+     #then regroup the data and include the count as a grouping
+     #note that the code assumes that any NDs are equal to the MRL/MDL that was reported for the purpose of averaging the results
+     all<-rpa2 %>%
+        group_by(OrganizationID,MLocID,StationDes,MonLocType,SampleMedia,SampleSubmedia,Char_Name,Sample_Fraction,CASNumber,YearMonth,Multiple) %>%
+        summarise(
+           Result_Text= mean(Result_Numeric),
+           Result_Numeric=Result_Text,
+           MRLValue = mean(MRLValue),
+           MDLValue = mean(MDLValue),
+           Result_Type="Calculated",
+           Result_Unit='ug/l',
+           Method_Code="Calculated",
+           Activity_Type="Calculated",
+           Analytical_Lab="Calculated from multiple samples (usually multiple discrete grabs)"
+        ) %>%
+        unique()
+     
+     
+     #need to add in < if applicable
+     all$Result_Text<-ifelse(((!is.na(all$MRLValue))|!(is.na(all$MDLValue))) & 
+                                (all$Result_Numeric==all$MRLValue | all$Result_Numeric==all$MDLValue),
+                             paste0("<",all$Result_Text),all$Result_Text)
+     
+     
+     #Remove the multiple samples from the rpa dataset and add in the calculated data
+     #get char names for multiple counts
+     multname<-all%>%
+        subset(Multiple=="Yes", select=c(OrganizationID,YearMonth,MLocID,StationDes,MonLocType,
+                                         SampleMedia,SampleSubmedia,Char_Name,Sample_Fraction,CASNumber))
+     
+     #only take rows that aren't in multname
+     rpa<-anti_join(rpa,multname,by=c('OrganizationID','YearMonth','MLocID','Char_Name','Sample_Fraction','SampleSubmedia'))
+     
+     #bind in calculated data where count>1
+     rpa<-rbind.fill(rpa,subset(all,Multiple=="Yes"))
+     
+     #add in YearMonth as SampleStartDate for calculated data so that we have a way to track when samples were taken,
+     #transform the non "YearMonth" dates into a format excel can recognize
+     rpa<-rpa %>%
+        mutate(SampleStartDate = ifelse(!(is.na(Multiple)),YearMonth,format(as.Date(SampleStartDate),"%m/%d/%Y")))
      
      #add T, D, or I to CAS# for certain parameters (mostly metals, used RPA workbook to identify parameters) 
      #so that the RPA workbooks will recognize them
@@ -496,9 +683,18 @@ server <- function(input, output) {
                            paste0("PHENOLICS"),
                            rpa$CASNumber)
      
+     #there has been confusion in the CAS #s for Bis(2-chloroisopropyl) ether and Bis(2-chloro-1-methylethyl) ether. 
+     #they are distinct but structurally similar chemicals. The name Bis(2-chloroisopropyl) ether has been used to refer to 
+     #chemicals under both CAS 108-60-1 and 39638-32-9. 108-60-1 is the correct CAS according to EPA. 
+     #AWQMS has Bis(2-chloroisopropyl) ether listed with CAS # 39638-32-9
+     #changing the CAS # back for RPA purposes 
+     #(source: Clarification of the relationship between bis(2-chloro-1-methylethyl) ether (CASRM 108-60-1) and bis(2-chloroisopropyl) ether, EPA September 2016)
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Bis(2-chloroisopropyl) ether"),
+                           paste0("108601"),
+                           rpa$CASNumber)
+     
      #combine Char_Name and Sample_Fraction for just metals
      rpa<-namefrac(rpa)
-
      
      #change data that is between MDL and MRL to have e in front of result
      rpa$Result_Text<-ifelse((!is.na(rpa$MDLValue)) & (!is.na(rpa$MRLValue)) 
@@ -506,22 +702,14 @@ server <- function(input, output) {
                         paste0("e",rpa$Result_Text),
                         rpa$Result_Text)
      
-     #remove estimated data if result is above MRL value (want to keep data between MRL and MDL, even though it is estimated)
-     #however, don't want data that is biased low due to matrix issues, so change to where we keep "<" data (between MDL and MRL)
-     #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
      #only take certain rows, change order so that it is more in line with RPA
-     rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue),
-                 select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
+     rpa<-subset(rpa,select=c(CASNumber,Project1,act_id,act_id,StationDes,Activity_Type,Method_Code,Char_Name,
                               SampleMedia,SampleStartDate,Result_Text,MRLValue,MDLValue,Result_Unit,Analytical_Lab,
                               Result_status,Result_Type,MLocID,MonLocType,Result_Comment))
-
      
      #need to remove dashes from CASNumber row
      rpa$CASNumber<-gsub("-","",rpa$CASNumber)
      
-     #need to transform date so excel recognizes it as a date
-     rpa$SampleStartDate<-as.Date(rpa$SampleStartDate)
-     rpa$SampleStartDate<-format(rpa$SampleStartDate, "%m/%d/%Y")
      
      }
      return(rpa)
@@ -672,7 +860,7 @@ server <- function(input, output) {
                       "Metals and Hardness: ",toString(metalsrpa))
      
      #add continuous data availability warning
-     warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
+     #warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
      
        
      ###Search Criteria
@@ -696,7 +884,7 @@ server <- function(input, output) {
        writeData(wb,sheet="Search Criteria",x=querydate,startRow=4,startCol=1)
        
        #add sub title for continuous data warning
-       if(length(warn)>0) {writeData(wb,sheet="Search Criteria",x=warn,startRow=5,startCol=1)}
+       #if(length(warn)>0) {writeData(wb,sheet="Search Criteria",x=warn,startRow=5,startCol=1)}
        
        #populate rows with parameters
        writeData(wb,sheet="Search Criteria",x=startdt,startCol=1,startRow=7)
@@ -721,7 +909,16 @@ server <- function(input, output) {
        {addWorksheet(wb,"Map") 
         
        #create map with limited labels
-       map<-leaflet(data()) %>%
+          
+          #need to combine information from grab and continuous data if we're going to get the map to work
+          #take both datasets and subset so they have the same basic columns
+          subdat<-select(data(),MLocID,StationDes,type,Long_DD,Lat_DD)
+          subcont<-select(cont(),MLocID,StationDes,type,Long_DD,Lat_DD)
+          
+          #combine dataframes and get unique values
+          comb<-unique(rbind(subdat,subcont))
+          
+       map<-leaflet(comb) %>%
          addTiles()%>%
          addMarkers(lng=~Long_DD,
                     lat=~Lat_DD,
@@ -762,10 +959,23 @@ server <- function(input, output) {
             setColWidths(wb,"Diagnostics",cols=1:5,widths=20)
 
   #####Data worksheets
-       #All data      
+       #All grab data      
        addWorksheet(wb,"Data")
             writeDataTable(wb,"Data",x=dsub(),tableStyle="none")
-        
+      
+       #continuous data   
+       if (nrow(cont())!=0) {addWorksheet(wb,"Continuous Data")
+                             writeDataTable(wb,"Continuous Data",x=dcont(),tableStyle="none")
+       }
+      
+       #summary of continuous data
+       if(nrow(contsumstat())!=0) {addWorksheet(wb,"Continuous Summary Stats")
+                                   writeData (wb,"Continuous Summary Stats",startRow=1,x="Summary Statistics Calculated from Continuous data")
+                                   writeData (wb,"Continuous Summary Stats",startRow=2,x="Summary Statistics include the daily maximum, daily minimum, daily average, the number of observations per day, the 7 day average of the daily maximum, and the 60 day average of the daily maximum")
+                                   writeData (wb,"Continuous Summary Stats",startRow=3,x="The 7 and 60 day average are calculated with using the 7 day or 60 days preceeding (aka 'right adjusted'). This is consistent with the Integrated Report.")
+                                   writeData (wb,"Continuous Summary Stats",startRow=4,x="ninetyninth column is the 99th percentile of the daily temperature data, it is included as a check to ensure that the daily maximum is not an outlier")
+                                   writeDataTable(wb,"Continuous Summary Stats", startRow=6, x=contsumstat(),tableStyle="none")}
+              
        #RPA          
        if (nrow(rpa())!=0) {addWorksheet(wb,"Toxics_Data_Format")
                            writeDataTable(wb,"Toxics_Data_Format",startRow=4,x=rpa(),tableStyle="none")
