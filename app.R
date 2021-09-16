@@ -364,8 +364,18 @@ server <- function(input, output, session) {
       
    #query for continuous data - note that we are not including rejected or unreviewed data,
    #also, we only want temperature, pH, conductivity, salinity, and DO data, 
+      #fix some of the inputs
+      gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine","Flow")),
+                  "Copper and Aluminum BLM"=cuB,   
+                  "pH and Ammonia RPA"=phammrpa,
+                  "DO RPA"=dorpa,
+                  "Toxics"=tox,
+                  "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
+      one<-c(input$oneoff)
+      rchar<-c(gch,one)
+      
    dat<-AWQMS_Data_Cont(startdate=toString(sprintf("%s",input$startd)),toString(sprintf("%s",input$endd)),
-                        station=c(input$monlocs),char=c("pH","Temperature, water","Salinity","Conductivity","Dissolved oxygen (DO)"),
+                        station=c(input$monlocs),char=rchar,
                         org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID), 
                         Result_Status=c("Accepted","Final","Validated","Preliminary","Provisional"))
    
