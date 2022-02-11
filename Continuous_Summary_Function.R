@@ -7,16 +7,26 @@ contsum<-function(x,days=NULL) {
   require(zoo)
   require(lubridate)
   
+  #convert result date to date type
+  x$Result_Date<-as.Date(x$Result_Date)
+  
   #calculate daily 
   dstats<-x %>%
     group_by(MLocID,Result_Date,Char_Name) %>%
     summarise(max=max(Result_Numeric),min=min(Result_Numeric),average=mean(Result_Numeric),ninetyfifth=quantile(Result_Numeric,probs=.95, na.rm=TRUE),observations=n())
   
+  #add column to help determine if dates are consecutive, each group of consecutive dates gets its own number
+  dstats<-dstats %>%
+    group_by(MLocID,Char_Name) %>%
+    arrange(Result_Date) %>% 
+    group_by(Consec_Group = cumsum(c(TRUE, diff(Result_Date) > 1))) %>% 
+    ungroup()
+  
   #rename column names so that they make more sense
   names(dstats)[names(dstats)=="ninetyfifth"]<-'95th%ile'
   #calculate 7 day rolling average of the maximum, use right adjustment (so it takes the 7 days prior)
   SevenD<-dstats%>%
-    dplyr::group_by(MLocID,Char_Name)%>%
+    dplyr::group_by(MLocID,Char_Name,Consec_Group)%>%
     dplyr::mutate(zoo::rollmeanr(max,k=7,fill=NA))
  
   #rename columns so that they make more sense
@@ -24,7 +34,7 @@ contsum<-function(x,days=NULL) {
   
   #calculate 60 day rolling average of the maximum, use right adjustment (so it takes 60 days prior) 
   SixtyD<-SevenD%>%
-    dplyr::group_by(MLocID,Char_Name)%>%
+    dplyr::group_by(MLocID,Char_Name,Consec_Group)%>%
     dplyr::mutate(zoo::rollmeanr(max,k=60,fill=NA))
   
   #rename columns so that they make more sense
@@ -37,7 +47,7 @@ contsum<-function(x,days=NULL) {
 
 
 #library(AWQMSdata)
-#x<-AWQMS_Data_Cont(startdate='2020-01-01',char=c("pH","Temperature, water","Salinity","Conductivity","Dissolved oxygen (DO)"),enddate='2021-01-01')
+#x<-AWQMS_Data_Cont(startdate='2014-01-01',char=c("pH","Temperature, water","Salinity","Conductivity","Dissolved oxygen (DO)"),enddate='2021-01-01',station='WNF-081')
 #try<-contsum(x)
 
 #compare 90th percentile of continuous data from using daily average vs from raw continuous
