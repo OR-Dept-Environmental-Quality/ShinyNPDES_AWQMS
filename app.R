@@ -71,7 +71,8 @@ pestrpa<-c("p,p'-DDT","Parathion","Chlordane","Lindane","Dieldrin","Endrin","Met
            "Azinphos-methyl","Malathion","Aldrin",".alpha.-Hexachlorocyclohexane",".beta.-Hexachlorocyclohexane",
            "Benzene Hexachloride, Beta (BHC)","1,2,3,4,5,6-Hexachlorocyclohexane",".alpha.-Endosulfan","Heptachlor epoxide",
            "Endosulfan sulfate","Mirex","Chlorpyrifos","Endrin aldehyde","Toxaphene","Demeton","Aroclor 1260","Aroclor 1254",
-           "Aroclor 1221","Aroclor 1232","Aroclor 1248","Aroclor 1016",".beta.-Endosulfan","Aroclor 1242","Total PCBs")
+           "Aroclor 1221","Aroclor 1232","Aroclor 1248","Aroclor 1016",".beta.-Endosulfan","Aroclor 1242","Total PCBs",
+           "2,3,7,8-Tetrachlorodibenzo-p-dioxin")
 
 #Base Neutral
 bneut<-c("Benzo[a]pyrene","Dibenz[a,h]anthracene","Benz[a]anthracene","N-Nitrosodimethylamine","Hexachloroethane",
@@ -112,7 +113,7 @@ oneoff<-base::unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand
                  "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
 
 
-print("Now loading query cache")
+print("Now loading query cache. Note: may take 15 min or more if cache needs to refresh")
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 7 days old, query out stations and organizations and save the cache
@@ -527,7 +528,7 @@ server <- function(input, output, session) {
      #(need to do >MDLValue because if we do >= it will pull in all NDs since we put those into AWQMS as "<MDL")
      rpa<-subset(rpa,rpa$Result_Type!="Estimated" | (rpa$Result_Numeric<=rpa$MRLValue & rpa$Result_Numeric>rpa$MDLValue))
 
-     #need to do unit conversions, al in ug/l, except for Alkalinity, which should be in mg/L
+     #need to do unit conversions, all in ug/l, except for Alkalinity, which should be in mg/L
      #checked AWQMS database, all alkalinity is reported in mg/l or mg/l CaCO3, no need for conversion
      #get list of char names in RPA
      names<-unique(rpa$Char_Name)
@@ -609,10 +610,9 @@ server <- function(input, output, session) {
      
      
      #need to add in < if applicable
-     all$Result_Text<-ifelse(((!is.na(all$MRLValue))|!(is.na(all$MDLValue))) & 
-                                (all$Result_Numeric==all$MRLValue | all$Result_Numeric==all$MDLValue),
-                             paste0("<",all$Result_Text),all$Result_Text)
-     
+     all$Result_Text<-ifelse((!is.na(all$MRLValue) & all$Result_Numeric==all$MRLValue)|
+                                (!is.na(all$MDLValue) &all$Result_Numeric==all$MDLValue),
+                             paste0("<",all$Result_Text),all$Result_Text)  
      
      #Remove the multiple samples from the rpa dataset and add in the calculated data
      #get char names for multiple counts
