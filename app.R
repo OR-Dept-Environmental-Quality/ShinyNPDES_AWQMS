@@ -10,15 +10,12 @@ library(shiny)
 library(AWQMSdata)
 library(leaflet)
 library(plyr,include.only = "rbind.fill")
-library(dplyr)
-library(xlsxjars)
 library(mapview)
 library(leaflet.extras)
 #library(mapedit)
 #library(sf)
 library(shinybusy)
 library(openxlsx)
-library(tidyr)
 library(tidyverse)
 library(DT)
 
@@ -110,7 +107,7 @@ tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
 #one-off characteristics of interest
 oneoff<-base::unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
                  "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
-                 "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen"))
+                 "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen", "Fluoride"))
 
 
 print("Now loading query cache. Note: may take 15 min or more if cache needs to refresh")
@@ -125,13 +122,13 @@ if(!file.exists("query_cache.RData") |
 station <- NPDES_AWQMS_Stations()
 Mtype<-station$MonLocType
 auid<-station$AU_ID
-auid<-sort(station$AU_ID)
+auid<-base::sort(station$AU_ID)
 station <- station$MLocID
-station <- sort(station)
+station <- base::sort(station)
 
 organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
-organization <- sort(organization)
+organization <- base::sort(organization)
 
 #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
 save(station, Mtype, auid, organization, file = 'query_cache.RData')
@@ -316,7 +313,7 @@ server <- function(input, output, session) {
      
    
    #fix some of the inputs
-      gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine","Flow")),
+      gch<-switch(input$characteristics,"All RPA"=base::unique(c(phammrpa,cuB,dorpa,tox,"Chlorine","Flow")),
                   "Copper and Aluminum BLM"=cuB,   
                   "pH and Ammonia RPA"=phammrpa,
                   "DO RPA"=dorpa,
@@ -343,7 +340,7 @@ server <- function(input, output, session) {
    #able fix this by grouping via MLocID, then getting the unique chars via summarize
    #then merge the two dataframes together using MLocID, creates column called "type" that has chars
    grp<-dat %>% group_by(MLocID) %>% 
-     summarize(type = paste(sort(unique(Char_Name)),collapse=", "))
+     summarize(type = paste(base::sort(base::unique(Char_Name)),collapse=", "))
    
    #merge 
    
@@ -366,7 +363,7 @@ server <- function(input, output, session) {
    #query for continuous data - note that we are not including rejected or unreviewed data,
    #also, we only want temperature, pH, conductivity, salinity, and DO data, 
       #fix some of the inputs
-      gch<-switch(input$characteristics,"All RPA"=unique(c(phammrpa,cuB,dorpa,tox,"Chlorine","Flow")),
+      gch<-switch(input$characteristics,"All RPA"=base::unique(c(phammrpa,cuB,dorpa,tox,"Chlorine","Flow")),
                   "Copper and Aluminum BLM"=cuB,   
                   "pH and Ammonia RPA"=phammrpa,
                   "DO RPA"=dorpa,
@@ -391,7 +388,7 @@ server <- function(input, output, session) {
    #able fix this by grouping via MLocID, then getting the unique chars via summarize
    #then merge the two dataframes together using MLocID, creates column called "type" that has chars
    grp<-dat %>% group_by(MLocID) %>% 
-      summarize(type = paste(sort(unique(Char_Name)),collapse=", "))
+      summarize(type = paste(base::sort(base::unique(Char_Name)),collapse=", "))
    
    #merge 
    
@@ -428,7 +425,7 @@ server <- function(input, output, session) {
    
    #download for continuous data
    dcont<-eventReactive(input$goButton,{
-      dcont<-select(cont(), OrganizationID,org_name,StationDes,MonLocType,HUC8_Name,HUC12_Name,Lat_DD,Long_DD,AU_ID,Equipment_ID,
+      dcont<-select(cont(), OrganizationID,org_name,StationDes,MLocID,MonLocType,HUC8_Name,HUC12_Name,Lat_DD,Long_DD,AU_ID,Equipment_ID,
                     Media,Sub_Media,Result_Date,Result_Time,Time_Zone,Char_Name,Result_Numeric,Operator,Result_Unit,Result_Status,
                     DQL,Depth,Depth_Unit,Comments)
       
@@ -441,7 +438,7 @@ server <- function(input, output, session) {
      tsub()
    })
    
-   #table of queried continouous data for Shiny app view
+   #table of queried continuous data for Shiny app view
    output$continuous<-renderDataTable({
       tcont()
    })
@@ -454,7 +451,7 @@ server <- function(input, output, session) {
       subcont<-select(cont(),MLocID,StationDes,type,Long_DD,Lat_DD)
       
       #combine dataframes and get unique values
-      comb<-unique(rbind(subdat,subcont))
+      comb<-base::unique(rbind(subdat,subcont))
       
       #create map
      leaflet(comb) %>%
@@ -464,10 +461,11 @@ server <- function(input, output, session) {
                   popup=paste("Station ID: ",comb$MLocID,"<br>",
                               "Description: ",comb$StationDes,"<br>",
                               "Characteristics: ",comb$type,"<br>"),
-                  popupOptions= popupOptions(maxHeight = 75)) %>%
+                  popupOptions= popupOptions(maxHeight = 75)) 
+     #%>%
        #want to be able to select points on map via polygon.
        #first step is to be able to draw polygon on map
-       addDrawToolbar(editOptions = editToolbarOptions())
+       #addDrawToolbar(editOptions = editToolbarOptions())
    })
    
    #show map in shiny viewer
@@ -531,7 +529,7 @@ server <- function(input, output, session) {
      #need to do unit conversions, all in ug/l, except for Alkalinity, which should be in mg/L
      #checked AWQMS database, all alkalinity is reported in mg/l or mg/l CaCO3, no need for conversion
      #get list of char names in RPA
-     names<-unique(rpa$Char_Name)
+     names<-base::unique(rpa$Char_Name)
      #remove alkalinity and hardness, those needs to stay as mg/l
      names<-names[!(names %in% c("Alkalinity, total","Hardness, Ca, Mg"))]
      
@@ -561,7 +559,7 @@ server <- function(input, output, session) {
            Method_Code="Calculated",
            Activity_Type="Calculated",
            Analytical_Lab="Calculated from isomer data") %>%
-        unique()
+        base::unique()
      
      #need to add in < if applicable
      dich$Result_Text<-ifelse(((!is.na(dich$MRLValue))|!(is.na(dich$MDLValue))) & 
@@ -606,7 +604,7 @@ server <- function(input, output, session) {
            Activity_Type="Calculated",
            Analytical_Lab="Calculated from multiple samples (usually multiple discrete grabs)"
         ) %>%
-        unique()
+        base::unique()
      
      
      #need to add in < if applicable
@@ -756,8 +754,8 @@ server <- function(input, output, session) {
          
          
          #add CAS#
-         cas<-subset(rpa(),select=c(unique(Char_Name),unique(CASNumber)))
-         RPAsum<-unique(left_join(RPAsum,cas, by="Char_Name"))
+         cas<-subset(rpa(),select=c(base::unique(Char_Name),base::unique(CASNumber)))
+         RPAsum<-base::unique(left_join(RPAsum,cas, by="Char_Name"))
          
          #get into an order that can go right into the RPA spreadsheet
          RPAsum<-subset(RPAsum,select=c(MonLocType,Char_Name,count_result,count_all,max,geomean,average,CV,CASNumber))
@@ -916,7 +914,7 @@ server <- function(input, output, session) {
           subcont<-select(cont(),MLocID,StationDes,type,Long_DD,Lat_DD)
           
           #combine dataframes and get unique values
-          comb<-unique(rbind(subdat,subcont))
+          comb<-base::unique(rbind(subdat,subcont))
           
        map<-leaflet(comb) %>%
          addTiles()%>%
