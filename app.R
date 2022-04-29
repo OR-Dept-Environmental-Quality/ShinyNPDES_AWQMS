@@ -228,11 +228,6 @@ ui <- fluidPage(
                        "Select organization",
                        choices = organization,
                        multiple = TRUE),
-
-       #keep continuous data summary stats button
-       checkboxInput("Summary",
-                     label="Keep Continuous Data Summary Statistics (other than 7 day avg)?",
-                     value=FALSE),
        
        #add action button, so query doesn't run until button is clicked
        actionButton("goButton","Run Query"),
@@ -330,7 +325,7 @@ server <- function(input, output, session) {
    #remove summary stats that are not 7 day avg, also check for and remove non-UTF8 characteristics from result_comment column
    #(which can prevent final excel download from opening)
    
-   dat<-if(input$Summary){dat} else  {subset(dat,is.na(dat$Time_Basis)|dat$Time_Basis %in% "7DADMean")}
+   dat<-subset(dat,is.na(dat$Time_Basis)|dat$Time_Basis %in% "7DADMean")
    
    dat$Result_Comment<-iconv(dat$Result_Comment,"UTF-8","UTF-8",sub='')
    
@@ -349,16 +344,8 @@ server <- function(input, output, session) {
    mer
    })
    
-   #if summary statistics are included, create flag showing that continuous data is available and remove all data that isn't 7 day avg
-   #output$contwar<-renderText({
-    # warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
-    # warn
-   #})
-   
-   
    #query for continuous data
    cont<-eventReactive(input$goButton, {
-   
       
    #query for continuous data - note that we are not including rejected or unreviewed data,
    #also, we only want temperature, pH, conductivity, salinity, and DO data, 
@@ -857,10 +844,6 @@ server <- function(input, output, session) {
                       "Volatile Organic Carbon: ",toString(vocrpa), "\n\n",
                       "Metals and Hardness: ",toString(metalsrpa))
      
-     #add continuous data availability warning
-     #warn<-if(any(!is.na(orig()$Time_Basis))) {paste("Continous data may be available upon request")}
-     
-       
      ###Search Criteria
      addWorksheet(wb,"Search Criteria")
        
