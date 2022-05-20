@@ -1,10 +1,7 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-######This app, based on a modified verison of the AWQMSdata_ShinyHelp app built by Travis Pritchard, 
-######is designed to pull out RPA related data from AWQMS and put it into a table for use in RPA analysis
-
-print("Initial data queries may take a few minutes.")
+# This is a Shiny web application. You can run the application by clicking the 'Run App' button above.
+# This app, based on a modified verison of the AWQMSdata_ShinyHelp app built by Travis Pritchard, 
+##is designed to pull out RPA related data from AWQMS and put it into a table for use in RPA analysis
 
 library(shiny)
 library(AWQMSdata)
@@ -20,11 +17,8 @@ library(tidyverse)
 library(DT)
 
 
-
 #attempt to turn off scientific notation
 options(scipen=999)
-
-print("Now loading sourced functions.")
 
 #Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
 #plus, for NPDES only need a subset of data- 
@@ -39,77 +33,16 @@ source("AlBLM_Transform.R")
 #function to calculate summary stats from continuous data
 source("Continuous_Summary_Function.R")
 
-print("Now loading valid values")
-
-# Query out the valid values 
-#NPDES only needs a limited # of Chars, this should help speed up the program
-#make it so only the RPA groupings are shown in the drop down
-
-chars <- c("All RPA","Toxics","Copper and Aluminum BLM","pH and Ammonia RPA","DO RPA","All AWQMS Characteristics","None")
-
-#create variables with specific characteristics for the different groups 
-#(note, keeping various groupings for metals, VOCs, base neutrals because they can be easier to update, but will all be 
-#pulled under "Toxics")
-
-#pH and Ammonia RPA (almost the same, ammonia just has the ammonia chars)
-phammrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")
-
-#Copper and Aluminum BLM
-cuB<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
-       "Temperature, water","Total Sulfate","Sulfide","Conductivity","Specific conductance", "Aluminum")
-
-#Dissolved Oxygen RPA
-dorpa<-c("Dissolved oxygen (DO)","Dissolved oxygen saturation","Biochemical oxygen demand, non-standard conditions",
-         "Biochemical oxygen demand, standard conditions","Kjeldahl nitrogen","Total Kjeldahl nitrogen","Temperature, water",
-         "Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")  
-
-#Pesticides and PCBs
-pestrpa<-c("p,p'-DDT","Parathion","Chlordane","Lindane","Dieldrin","Endrin","Methoxychlor","p,p'-DDD","p,p'-DDE","Heptachlor",
-           "Azinphos-methyl","Malathion","Aldrin",".alpha.-Hexachlorocyclohexane",".beta.-Hexachlorocyclohexane",
-           "Benzene Hexachloride, Beta (BHC)","1,2,3,4,5,6-Hexachlorocyclohexane",".alpha.-Endosulfan","Heptachlor epoxide",
-           "Endosulfan sulfate","Mirex","Chlorpyrifos","Endrin aldehyde","Toxaphene","Demeton","Aroclor 1260","Aroclor 1254",
-           "Aroclor 1221","Aroclor 1232","Aroclor 1248","Aroclor 1016",".beta.-Endosulfan","Aroclor 1242","Total PCBs",
-           "2,3,7,8-Tetrachlorodibenzo-p-dioxin")
-
-#Base Neutral
-bneut<-c("Benzo[a]pyrene","Dibenz[a,h]anthracene","Benz[a]anthracene","N-Nitrosodimethylamine","Hexachloroethane",
-         "Hexachlorocyclopentadiene","Isophorone","Acenaphthene","Diethyl phthalate","Dibutyl phthalate","Phenanthrene",
-         "Butyl benzyl phthalate","N-Nitrosodiphenylamine","Fluorene","Hexachlorobutadiene","Naphthalene","2-Chloronaphthalene",
-         "3,3'-Dichlorobenzidine","Benzidine","1,2,4,5-Tetrachlorobenzene","Nitrobenzene","BDE-003",
-         "Bis(2-chloro-1-methylethyl) ether","Bis(2-chloroethyl) ether","Bis(2-chloroethoxy)methane","Di(2-ethylhexyl) phthalate",
-         "Di-n-octyl phthalate","Hexachlorobenzene","Anthracene","1,2,4-Trichlorobenzene","2,4-Dinitrotoluene","1,2-Diphenylhydrazine",
-         "Pyrene","Dimethyl phthalate","Benzo[ghi]perylene","Indeno[1,2,3-cd]pyrene","Benzo(b)fluoranthene","Fluoranthene",
-         "Benzo[k]fluoranthene","Acenaphthylene","Chrysene","2,6-Dinitrotoluene","Pentachlorobenzene","N-Nitrosodi-n-propylamine",
-         "p-Chlorophenyl phenyl ether","Azobenzene","Bis(2-chloroisopropyl) ether")
-
-#Acid Extractable
-aext<-c("2,4-Dinitrophenol","p-Chloro-m-cresol","Pentachlorophenol","2,4,6-Trichlorophenol","o-Nitrophenol","o-Chlorophenol",
-        "2,4,5-Trichlorophenol","p-Nitrophenol","2,4-Dimethylphenol","Phenol","Phenols","2,4-Dichlorophenol","4,6-Dinitro-o-cresol")
-
-#Volatile Organic Carbons 
-#Trichloroethene (TCE) has been retired in AWQMS, replaced with Trichloroethylene
-vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane","Methyl bromide","Chloromethane","Chloroethane",
-          "Vinyl chloride","Methylene chloride","Tribromomethane","Dichlorobromomethane","1,1-Dichloroethane","1,1-Dichloroethylene",
-          "1,2-Dichloropropane","1,1,2-Trichloroethane","Trichloroethene (TCE)","Trichloroethylene","1,1,2,2-Tetrachloroethane","o-Dichlorobenzene",
-          "Ethylbenzene","p-Dichlorobenzene","Acrolein","Allyl chloride","1,2-Dichloroethane","Toluene","Chlorobenzene",
-          "2-Chloroethyl vinyl ether","Chlorodibromomethane","Tetrachloroethene","Tetrachloroethylene","trans-1,2-Dichloroethylene",
-          "m-Dichlorobenzene","1,3-Dichloropropene","Acrylonitrile","trans-1,3-Dichloropropene","cis-1,3-Dichloropropene")
-
-#Metals and Hardness
-metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
-             "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
-             "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
-             "Hardness, carbonate","Hardness, non-carbonate","Methylmercury(1+)")
-
-#all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - adding some of the "other parameters with state WQ crit" 
-tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
+#### Define Inputs for UI#####
 
 print("Now loading query cache. Note: may take 15 min or more if cache needs to refresh")
 
+#have separate caches for variables so that they don't have to all refresh at the same rate
+
 # Check to see if saved cache of data exists. If it does not, or is greater than
-# 7 days old, query out stations and organizations and save the cache
+# 14 days old, query out stations and organizations and save the cache
 if(!file.exists("query_cache.RData") | 
-   difftime(Sys.Date() ,file.mtime("query_cache.RData") , units = c("days")) > 7){
+   difftime(Sys.Date() ,file.mtime("query_cache.RData") , units = c("days")) > 14){
   
 
 #NPDES_AWQMS_Stations functions only pulls stations of interest to NPDES program
@@ -124,33 +57,27 @@ organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- base::sort(organization)
 
-allchar<-AWQMS_Chars()
-
 #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
-save(station, Mtype, auid, organization, allchar, file = 'query_cache.RData')
+save(station, Mtype, auid, organization, file = 'query_cache.RData')
 } else {
   load("query_cache.RData")
 }
 
+# Check to see if saved cache of data exists. If it does not, or is greater than
+# 6 months old, query out all characteristics and save the cache
+if(!file.exists("query_cache_allchar.RData") | 
+   difftime(Sys.Date() ,file.mtime("query_cache_allchar.RData") , units = c("days")) > 182){
+  
+  allchar<-AWQMS_Chars()
+  
+  #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
+  save(allchar, file = 'query_cache_allchar.RData')
+} else {
+  load("query_cache_allchar.RData")
+}
+
 list<-split(allchar,seq(nrow(allchar)))
 oneoff<-unlist(list,use.names=FALSE)
-
-HUC8_Names <- c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork',
-                'Brownlee Reservoir', 'Bully', 'Burnt', 'Chetco', 'Chief Joseph',
-                'Clackamas', 'Coast Fork Willamette', 'Coos','Coquille',
-                'Crooked-Rattlesnake',  'Donner und Blitzen',' Goose Lake',
-                'Guano', 'Harney-Malheur Lakes', 'Illinois', 'Imnaha', 'Jordan',
-                'Lake Abert', 'Little Deschutes','Lost', 'Lower Columbia', 'Lower Columbia-Clatskanie',
-                'Lower Columbia-Sandy','Lower Crooked','Lower Deschutes', 'Lower Grande Ronde', 'Lower John Day',
-                'Lower Malheur', 'Lower Owyhee', 'Lower Rogue', 'Lower Willamette', 'Mckenzie', 'Middle Columbia-Hood',
-                'Middle Columbia-Lake Wallula', 'Middle Fork John Day', 'Middle Fork Willamette', 'Middle Owyhee',
-                'Middle Rogue', 'Middle Snake-Payette', 'Middle Snake-Succor', 'Middle Willamette', 'Molalla-Pudding',
-                'Necanicum', 'Nehalem', 'North Fork John Day', 'North Santiam', 'North Umpqua', 'Not Loaded', 'Powder',
-                'Siletz-Yaquina', 'Siltcoos', 'Silver', 'Silvies', 'Siuslaw', 'Sixes', 'Smith', 'South Fork Owyhee', 'South Santiam',
-                'South Umpqua', 'Sprague', 'Summer Lake', 'Trout', 'Tualatin', 'Umatilla', 'Umpqua', 'Upper Columbia-Entiat',
-                'Upper Columbia-Priest Rapids', 'Upper Crooked', 'Upper Deschutes', 'Upper Grande Ronde,Upper John Day',
-                'Upper Klamath', 'Upper Klamath Lake', 'Upper Malheur', 'Upper Quinn', 'Upper Rogue', 'Upper Willamette',
-                'Walla Walla', 'Wallowa', 'Warner Lakes', 'Williamson', 'Willow', 'Wilson-Trusk-Nestuccu', 'Yamhill')
 
 
 ########################################### Define UI ########################################################
@@ -184,7 +111,7 @@ ui <- fluidPage(
         #characteristics
          selectizeInput("characteristics",
                      "Select RPA Group (pick one only)",
-                     choices = chars,
+                     choices = c("All RPA","Toxics","Copper and Aluminum BLM","pH and Ammonia RPA","DO RPA","All AWQMS Characteristics","None"),
                      multiple = FALSE,
                      selected="All RPA"),
       
@@ -212,7 +139,20 @@ ui <- fluidPage(
        # huc8 names 
        selectizeInput("huc8_nms",
                        "Select HUC 8",
-                       choices = HUC8_Names,
+                       choices = c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork', 'Brownlee Reservoir', 'Bully', 'Burnt', 'Chetco',
+                                   'Chief Joseph','Clackamas', 'Coast Fork Willamette', 'Coos','Coquille', 'Crooked-Rattlesnake',  
+                                   'Donner und Blitzen',' Goose Lake', 'Guano', 'Harney-Malheur Lakes', 'Illinois', 'Imnaha', 'Jordan',
+                                   'Lake Abert', 'Little Deschutes','Lost', 'Lower Columbia', 'Lower Columbia-Clatskanie', 'Lower Columbia-Sandy',
+                                   'Lower Crooked','Lower Deschutes', 'Lower Grande Ronde', 'Lower John Day', 'Lower Malheur', 'Lower Owyhee',
+                                   'Lower Rogue', 'Lower Willamette', 'Mckenzie', 'Middle Columbia-Hood', 'Middle Columbia-Lake Wallula', 
+                                   'Middle Fork John Day', 'Middle Fork Willamette', 'Middle Owyhee','Middle Rogue', 'Middle Snake-Payette', 
+                                   'Middle Snake-Succor', 'Middle Willamette', 'Molalla-Pudding','Necanicum', 'Nehalem', 'North Fork John Day', 
+                                   'North Santiam', 'North Umpqua', 'Not Loaded', 'Powder','Siletz-Yaquina', 'Siltcoos', 'Silver', 'Silvies', 
+                                   'Siuslaw', 'Sixes', 'Smith', 'South Fork Owyhee', 'South Santiam','South Umpqua', 'Sprague', 'Summer Lake', 
+                                   'Trout', 'Tualatin', 'Umatilla', 'Umpqua', 'Upper Columbia-Entiat','Upper Columbia-Priest Rapids', 
+                                   'Upper Crooked', 'Upper Deschutes', 'Upper Grande Ronde,Upper John Day','Upper Klamath', 'Upper Klamath Lake', 
+                                   'Upper Malheur', 'Upper Quinn', 'Upper Rogue', 'Upper Willamette','Walla Walla', 'Wallowa', 'Warner Lakes', 
+                                   'Williamson', 'Willow', 'Wilson-Trusk-Nestuccu', 'Yamhill'),
                        multiple = TRUE),
        
        #AU_IDs, choices is NULL so that server-side selectize can be used to improve performance 
@@ -221,10 +161,10 @@ ui <- fluidPage(
                       choices = NULL,
                       multiple = TRUE),
     
-       #Orgs
+       #Orgs, choices is NULL so that server-side selectize can be used to improve performance
        selectizeInput("orgs",
                        "Select organization",
-                       choices = organization,
+                       choices = NULL,
                        multiple = TRUE),
        
        #add action button, so query doesn't run until button is clicked
@@ -313,6 +253,65 @@ server <- function(input, output, session) {
    updateSelectizeInput(session, 'montype', choices = Mtype, server = TRUE)
    updateSelectizeInput(session, 'AUID', choices = auid, server = TRUE)
    updateSelectizeInput(session, 'oneoff', choices= oneoff, server=TRUE)
+   updateSelectizeInput(session, 'orgs', choices= organization, server=TRUE)
+   
+   #NPDES only needs a limited # of Chars, this should help speed up the program.
+   #create variables with specific characteristics for the different analyte/RPA groups 
+   #(note, keeping various groupings for metals, VOCs, base neutrals because they can be easier to update, but will all be 
+   #pulled under "Toxics")
+   
+   #pH and Ammonia RPA (almost the same, ammonia just has the ammonia chars)
+   phammrpa<-c("Alkalinity, total","pH","Temperature, water","Salinity","Conductivity","Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")
+   
+   #Copper and Aluminum BLM
+   cuB<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
+          "Temperature, water","Total Sulfate","Sulfide","Conductivity","Specific conductance", "Aluminum")
+   
+   #Dissolved Oxygen RPA
+   dorpa<-c("Dissolved oxygen (DO)","Dissolved oxygen saturation","Biochemical oxygen demand, non-standard conditions",
+            "Biochemical oxygen demand, standard conditions","Kjeldahl nitrogen","Total Kjeldahl nitrogen","Temperature, water",
+            "Ammonia ","Ammonia and ammonium","Ammonia-nitrogen")  
+   
+   #Pesticides and PCBs
+   pestrpa<-c("p,p'-DDT","Parathion","Chlordane","Lindane","Dieldrin","Endrin","Methoxychlor","p,p'-DDD","p,p'-DDE","Heptachlor",
+              "Azinphos-methyl","Malathion","Aldrin",".alpha.-Hexachlorocyclohexane",".beta.-Hexachlorocyclohexane",
+              "Benzene Hexachloride, Beta (BHC)","1,2,3,4,5,6-Hexachlorocyclohexane",".alpha.-Endosulfan","Heptachlor epoxide",
+              "Endosulfan sulfate","Mirex","Chlorpyrifos","Endrin aldehyde","Toxaphene","Demeton","Aroclor 1260","Aroclor 1254",
+              "Aroclor 1221","Aroclor 1232","Aroclor 1248","Aroclor 1016",".beta.-Endosulfan","Aroclor 1242","Total PCBs",
+              "2,3,7,8-Tetrachlorodibenzo-p-dioxin")
+   
+   #Base Neutral
+   bneut<-c("Benzo[a]pyrene","Dibenz[a,h]anthracene","Benz[a]anthracene","N-Nitrosodimethylamine","Hexachloroethane",
+            "Hexachlorocyclopentadiene","Isophorone","Acenaphthene","Diethyl phthalate","Dibutyl phthalate","Phenanthrene",
+            "Butyl benzyl phthalate","N-Nitrosodiphenylamine","Fluorene","Hexachlorobutadiene","Naphthalene","2-Chloronaphthalene",
+            "3,3'-Dichlorobenzidine","Benzidine","1,2,4,5-Tetrachlorobenzene","Nitrobenzene","BDE-003",
+            "Bis(2-chloro-1-methylethyl) ether","Bis(2-chloroethyl) ether","Bis(2-chloroethoxy)methane","Di(2-ethylhexyl) phthalate",
+            "Di-n-octyl phthalate","Hexachlorobenzene","Anthracene","1,2,4-Trichlorobenzene","2,4-Dinitrotoluene","1,2-Diphenylhydrazine",
+            "Pyrene","Dimethyl phthalate","Benzo[ghi]perylene","Indeno[1,2,3-cd]pyrene","Benzo(b)fluoranthene","Fluoranthene",
+            "Benzo[k]fluoranthene","Acenaphthylene","Chrysene","2,6-Dinitrotoluene","Pentachlorobenzene","N-Nitrosodi-n-propylamine",
+            "p-Chlorophenyl phenyl ether","Azobenzene","Bis(2-chloroisopropyl) ether")
+   
+   #Acid Extractable
+   aext<-c("2,4-Dinitrophenol","p-Chloro-m-cresol","Pentachlorophenol","2,4,6-Trichlorophenol","o-Nitrophenol","o-Chlorophenol",
+           "2,4,5-Trichlorophenol","p-Nitrophenol","2,4-Dimethylphenol","Phenol","Phenols","2,4-Dichlorophenol","4,6-Dinitro-o-cresol")
+   
+   #Volatile Organic Carbons 
+   #Trichloroethene (TCE) has been retired in AWQMS, replaced with Trichloroethylene
+   vocrpa<-c("Carbon tetrachloride","Chloroform","Benzene","1,1,1-Trichloroethane","Methyl bromide","Chloromethane","Chloroethane",
+             "Vinyl chloride","Methylene chloride","Tribromomethane","Dichlorobromomethane","1,1-Dichloroethane","1,1-Dichloroethylene",
+             "1,2-Dichloropropane","1,1,2-Trichloroethane","Trichloroethene (TCE)","Trichloroethylene","1,1,2,2-Tetrachloroethane","o-Dichlorobenzene",
+             "Ethylbenzene","p-Dichlorobenzene","Acrolein","Allyl chloride","1,2-Dichloroethane","Toluene","Chlorobenzene",
+             "2-Chloroethyl vinyl ether","Chlorodibromomethane","Tetrachloroethene","Tetrachloroethylene","trans-1,2-Dichloroethylene",
+             "m-Dichlorobenzene","1,3-Dichloropropene","Acrylonitrile","trans-1,3-Dichloropropene","cis-1,3-Dichloropropene")
+   
+   #Metals and Hardness
+   metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
+                "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
+                "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
+                "Hardness, carbonate","Hardness, non-carbonate","Methylmercury(1+)")
+   
+   #all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - adding some of the "other parameters with state WQ crit" 
+   tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
    
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
    
