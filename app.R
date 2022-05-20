@@ -45,7 +45,7 @@ print("Now loading valid values")
 #NPDES only needs a limited # of Chars, this should help speed up the program
 #make it so only the RPA groupings are shown in the drop down
 
-chars <- c("All RPA","Toxics","Copper and Aluminum BLM","pH and Ammonia RPA","DO RPA","None")
+chars <- c("All RPA","Toxics","Copper and Aluminum BLM","pH and Ammonia RPA","DO RPA","All AWQMS Characteristics","None")
 
 #create variables with specific characteristics for the different groups 
 #(note, keeping various groupings for metals, VOCs, base neutrals because they can be easier to update, but will all be 
@@ -104,12 +104,6 @@ metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum"
 #all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - adding some of the "other parameters with state WQ crit" 
 tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine")
 
-#one-off characteristics of interest
-oneoff<-base::unique(c("Chlorine",tox,phammrpa,dorpa,cuB,"Chemical oxygen demand","Turbidity Field", "Orthophosphate","Escherichia coli",
-                 "Fecal Coliform","Phosphate-phosphorus","Total solids","Total suspended solids","Manganese","Flow","Total dissolved solids",
-                 "Chlorine, Total Residual","Nitrite","Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)","Organic Nitrogen", "Fluoride"))
-
-
 print("Now loading query cache. Note: may take 15 min or more if cache needs to refresh")
 
 # Check to see if saved cache of data exists. If it does not, or is greater than
@@ -130,12 +124,16 @@ organization <- AWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- base::sort(organization)
 
+allchar<-AWQMS_Chars()
+
 #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
-save(station, Mtype, auid, organization, file = 'query_cache.RData')
+save(station, Mtype, auid, organization, allchar, file = 'query_cache.RData')
 } else {
   load("query_cache.RData")
 }
 
+list<-split(allchar,seq(nrow(allchar)))
+oneoff<-unlist(list,use.names=FALSE)
 
 HUC8_Names <- c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork',
                 'Brownlee Reservoir', 'Bully', 'Burnt', 'Chetco', 'Chief Joseph',
@@ -190,10 +188,10 @@ ui <- fluidPage(
                      multiple = FALSE,
                      selected="All RPA"),
       
-         #specific characteristics outside of groups
+         #specific parameters outside of groups, choices is NULL so that server-side selectize can be used to improve performance 
          selectizeInput("oneoff",
                         "Specific Characteristics not part of groupings",
-                        choices=oneoff,
+                        choices=NULL,
                         multiple=TRUE),
 
        # Monitoring locations, choices is NULL so that server-side selectize can be used to improve performance 
@@ -209,7 +207,7 @@ ui <- fluidPage(
                        multiple=TRUE),
        
        #add warning
-       tags$em("Warning: HUC8 may not include all stations on coast"),
+       tags$em("Warning: HUC8 may not include all stations on coast or ocean"),
        
        # huc8 names 
        selectizeInput("huc8_nms",
@@ -255,20 +253,34 @@ ui <- fluidPage(
         tabsetPanel(
         #directions tab
         tabPanel("Directions", 
-                 mainPanel(h5("Select parameters on left to build table and map"),
+                 mainPanel(h4("This application helps NPDES permit writers view and download data from AWQMS for NPDES permitting purposes in a format
+                               that can be used directly with current RPA workbook tools"),
+                           tags$br(),
+                           h4("How to use:"),
+                           h5("Select parameters on left to build table and map for desired geographic area/organization/timeframe"),
+                           h5("Note that the user should fill in 'Permittee Name' and 'Permit Number', but that these items do not refine the search.
+                              These boxes carry over into the data download and file naming only."),
                            h5("Click 'Run Query' Button to perform search after selecting desired parameters."),
-                           h5("Peruse the 'Table' and 'Map' tabs to view results and locations"),
+                           h5("Peruse the 'Grab Data', 'Continuous Data', and 'Map' tabs to view results and locations"),
                            h5("Click 'Download Data' to download results"),
-                           h5("Note: All RPA also includes Chlorine data"),
+                           h5("Note: 'All RPA' also includes Chlorine data when available"),
+                           tags$br(),
+                           h4("Helpful Tips:"),
+                           h5("Effluent Priority Pollutant Scan and Copper/Aluminum BLM Data is entered into AWQMS under the name of the organization that collected the data. 
+                              To find this data select the appropriate time range for 'Select Start Date' and 'Select End Date' and the correct organization under 
+                              'Select Organization'. Note that this data pull should include both the effluent and ambient Copper/Aluminum BLM data"),
+                           h5("To find relevant ambient data for a permittee, use the Integrated Report Map to find the Assessment Unit a permittee discharges into and the next 
+                              Assessment Unit upstream. Include both of these in the 'Select Assessment Unit' box. Set the 'Select Start Date' to 10 years ago. 
+                              Note that data older than 10 years is generally not used for NPDES permit renewal or issuance purposes."),
+                           h5("The data pull will not include any quality control data (e.g. duplicates, blanks) or any data that has been rejected due to quality control issues,
+                              The data pull does include data that has been estimated due to quality control issues"),
+                           tags$br(),
                            h5("Warning: after running the query, if you change your mind about whether to include the map, 
-                              you must select the box to add the map and then re run the query to ensure that the map will be 
+                              you must select the box to add the map (underneath the 'run query' button) and then re run the query to ensure that the map will be 
                               part of the download"),
                            tags$br(),
-                           h5("Warning: running query with all characteristics and a large timeframe (1+ year) can overload the server.
-                              If you want to search for all characteristics, it is recommended that you run the query with a short timeframe
-                              first (~6 months), then use the map to locate several stations of interest and refine query accordingly.
-                              Alternatively, you may also refine by HUC8. However, refining search by HUC8 may not include all stations near 
-                              the coast.")
+                           h5("Warning: running query with all characteristics and a large timeframe (1+ year) can overload the server. Be sure to constrain
+                              your search either with a shorter timeframe (~6 months), by specific organization, or by geographic region (HUC8 or Assessment Unit)")
                            )
                  ),
         
@@ -300,6 +312,7 @@ server <- function(input, output, session) {
    updateSelectizeInput(session, 'monlocs', choices = station, server = TRUE)
    updateSelectizeInput(session, 'montype', choices = Mtype, server = TRUE)
    updateSelectizeInput(session, 'AUID', choices = auid, server = TRUE)
+   updateSelectizeInput(session, 'oneoff', choices= oneoff, server=TRUE)
    
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
    
@@ -313,7 +326,8 @@ server <- function(input, output, session) {
                   "pH and Ammonia RPA"=phammrpa,
                   "DO RPA"=dorpa,
                   "Toxics"=tox,
-                  "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
+                  "All AWQMS Characteristics"=oneoff,
+                  "None"= character(0)) #none is an empty character string so we can just pull one-off parameters
       one<-c(input$oneoff)
       rchar<-c(gch,one)
       
@@ -355,6 +369,7 @@ server <- function(input, output, session) {
                   "pH and Ammonia RPA"=phammrpa,
                   "DO RPA"=dorpa,
                   "Toxics"=tox,
+                  "All AWQMS Characteristics"=oneoff,
                   "None"=character(0)) #none is an empty character string so we can just pull one-off parameters
       one<-c(input$oneoff)
       rchar<-c(gch,one)
