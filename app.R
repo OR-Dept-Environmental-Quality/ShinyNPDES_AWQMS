@@ -633,11 +633,15 @@ server <- function(input, output, session) {
      #add T, D, or I to CAS# for certain parameters (mostly metals, used RPA workbook to identify parameters) 
      #so that the RPA workbooks will recognize them
      
+     #inorganic arsenic, have to add CAS # to match with RPA spreadsheet since AWQMS inorganic arsenic parameter doesn't have CAS
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Arsenic, Inorganic"),
+                           paste0("7440382I"),
+                           rpa$CASNumber)
      #dissolved
      rpa$CASNumber<-
        ifelse(rpa$Char_Name %in% c("Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
                                    "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
-                                   "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)") &
+                                   "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)","Arsenic, Inorganic") &
               rpa$Sample_Fraction %in% "Dissolved",
               paste0(rpa$CASNumber,"D"),
               rpa$CASNumber)
@@ -656,10 +660,7 @@ server <- function(input, output, session) {
                            paste0("57125F"),
                            rpa$CASNumber)
      
-     #inorganic arsenic, have to add CAS # to match with RPA spreadsheet since AWQMS inorganic arsenic parameter doesn't have CAS
-     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Arsenic, Inorganic"),
-                           paste0("7440382I"),
-                           rpa$CASNumber)
+
      
      #hardness, add 'Hardness' to CAS so RPA tool has something to work with
      rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Total hardness","Hardness, Ca, Mg",
