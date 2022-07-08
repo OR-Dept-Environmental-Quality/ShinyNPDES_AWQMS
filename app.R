@@ -87,6 +87,10 @@ ui <- fluidPage(
 
   sidebarLayout(
       sidebarPanel(
+        
+        tags$em("Permittee Identifying Information"),
+        tags$br(),
+        
         #permittee name
         textInput("permittee",
                   label="Permittee Name"),
@@ -94,8 +98,11 @@ ui <- fluidPage(
         textInput("permit_num",
                   label="Permit Number"),
         # Add line
-        tags$hr(),
+        tags$hr(style="border-color: black;"),
         #Add break
+        tags$br(),
+        
+        tags$em("Data Pull Parameters"),
         tags$br(),
         
         # Start Date (make start date six months ago)
