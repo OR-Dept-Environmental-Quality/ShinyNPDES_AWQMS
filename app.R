@@ -1086,8 +1086,8 @@ server <- function(input, output, session) {
                                                           
                               
                               #reorder columns for easy copy/paste into Cu BLM tool
-                              copper<-subset(copper,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result_Text",
-                                                "MDLValue","MRLValue","Result_Type","Temperature.water","pH","Organic.carbonDissolved","Humic Acid",
+                              copper<-subset(copper,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result_Text","Result_Type",
+                                                "MDLValue","MRLValue","Temperature.water","pH","Organic.carbonDissolved","Humic Acid",
                                                 "Calcium","Magnesium","Sodium","Potassium","Sulfate","Chloride",
                                                 "Alkalinity.total","Sulfide","Temperature.water.Result_Type","pH.Result_Type","Organic.carbonDissolved.Result_Type",
                                                 "Humic Acid Result_Type","Calcium.Result_Type","Magnesium.Result_Type",
@@ -1116,6 +1116,8 @@ server <- function(input, output, session) {
                
                
                #make sure all columns are there for each parameter (add as NA if there is no data)
+               aluminum<-if(!("Tempearture.water" %in% colnames(aluminum))){add_column(aluminum, "Temperature.water"=NA)} else {aluminum}
+               aluminum<-if(!("Alkalinity.total" %in% colnames(aluminum))){add_column(aluminum, "Alkalinity.total"=NA)} else {aluminum}
                aluminum<-if(!("pH" %in% colnames(aluminum))){add_column(aluminum, "pH"=NA)} else {aluminum}
                aluminum<-if(!("Hardness.Ca.Mg" %in% colnames(aluminum))){add_column(aluminum, "Hardness.Ca.Mg"=NA)} else {aluminum}
                aluminum<-if(!("Organic.carbonDissolved" %in% colnames(aluminum))){add_column(aluminum, "Organic.carbonDissolved"=NA)} else {aluminum}
@@ -1123,13 +1125,15 @@ server <- function(input, output, session) {
                
                #Same for result type
                
+               aluminum<-if(!("Temperature.water.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "Temperature.water.Result_Type"=NA)} else {aluminum}
+               aluminum<-if(!("Alkalinity.total.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "Alkalinity.total.Result_Type"=NA)} else {aluminum}
                aluminum<-if(!("pH.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "pH.Result_Type"=NA)} else {aluminum}
                aluminum<-if(!("Hardness.Ca.Mg.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "Hardness.Ca.Mg.Result_Type"=NA)} else {aluminum}
                aluminum<-if(!("Organic.carbonDissolved.Result_Type" %in% colnames(aluminum))){add_column(aluminum, "Organic.carbonDissolved.Result_Type"=NA)} else {aluminum}
 
                #reorder columns for easy copy/paste into Cu BLM tool
-               aluminum<-subset(aluminum,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result_Text",
-                                              "MDLValue","MRLValue","Result_Type","Organic.carbonDissolved", "Hardness.Ca.Mg","pH","Calc.Hardness",
+               aluminum<-subset(aluminum,select=c("OrganizationID","Project1","MLocID","SampleStartDate","SampleStartTime","Char_Name","Result_Text","Result_Type",
+                                              "MDLValue","MRLValue","Temperature.water","Alkalinity.total","Organic.carbonDissolved", "Hardness.Ca.Mg","pH","Calc.Hardness",
                                               "Organic.carbonDissolved.Result_Type","Hardness.Ca.Mg.Result_Type","pH.Result_Type","Hardness.Type"
                                               ))
                

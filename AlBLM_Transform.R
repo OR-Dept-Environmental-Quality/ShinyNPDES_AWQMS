@@ -26,13 +26,15 @@ AlBLM <- function(x) {
   x <- x[x$Result_status != 'Rejected',]
 
   #Need to check units and make sure they are converted properly
-  x <- AWQMSdata::unit_conv(x,c("Calcium","Magnesium","Organic carbon","Hardness, Ca, Mg"),"ug/l","mg/l")
+  x <- AWQMSdata::unit_conv(x,c("Calcium","Magnesium","Organic carbon","Hardness, Ca, Mg","Alkalinity, total"),"ug/l","mg/l")
   x <- AWQMSdata::unit_conv(x,"Aluminum","mg/l","ug/l")
+  x <- AWQMSdata::unit_conv(x,"Temperature, water", "deg F", "deg C")
 
 
-  # Analytes of interest for Aluminum BLM - note that the BLM uses hardness,
+  # Analytes of interest for Aluminum Model - note that the model uses hardness,
   # but it is possible to calculate hardness from Calcium and Magnesium or Conductivity, so they are included
-  char<-c("Hardness, Ca, Mg","Calcium","Aluminum","Magnesium","pH","Organic carbon","Conductivity")
+  # temperature and alkalinity needed so that the pH can be adjusted depending on the mix dilutions
+  char<-c("Hardness, Ca, Mg","Calcium","Aluminum","Magnesium","pH","Organic carbon","Conductivity","Alkalinity, total","Temperature, water")
 
   #Only want to keep analytes of interest, and remove any samples that are calculated from continuous data (eg. 7 day min)
   y<-subset(x,x$Char_Name %in% char & is.na(x$Statistical_Base))
@@ -43,7 +45,7 @@ AlBLM <- function(x) {
   y$Char_Name<-
     dplyr::case_when(y$Char_Name %in% c("Calcium","Aluminum","Magnesium","Organic carbon")
                      ~paste0(y$Char_Name,",",y$Sample_Fraction),
-                     y$Char_Name %in% c("Hardness, Ca, Mg","pH","Conductivity")
+                     y$Char_Name %in% c("Hardness, Ca, Mg","pH","Conductivity","Alkalinity, total","Temperature, water")
                      ~y$Char_Name)
 
   # Get only ancillary data
@@ -73,8 +75,8 @@ AlBLM <- function(x) {
 
 
 
-  Aluminum<-subset(Aluminum,select=c("OrganizationID","Project1", "MLocID",  "SampleStartDate","SampleStartTime", "Char_Name","Result_Text","MDLValue",
-                                 "MRLValue","Result_Type"))
+  Aluminum<-subset(Aluminum,select=c("OrganizationID","Project1", "MLocID","SampleStartDate","SampleStartTime", "Char_Name","Result_Text","Result_Type","MDLValue",
+                                 "MRLValue"))
 
   Aluminum_joined <- Aluminum %>%
     dplyr::mutate(date = as.Date(SampleStartDate)) %>%
