@@ -17,13 +17,12 @@ library(tidyverse)
 library(DT)
 
 
+#Run this if you need to update the AWQMSdata package
+#devtools::install_github("TravisPritchardODEQ/AWQMSdata")
+
 #attempt to turn off scientific notation
 options(scipen=999)
 
-#Need to remake query, cannot use AWQMS_Data as it pulls out too much data for the app to work,
-#plus, for NPDES only need a subset of data- 
-#the function NPDES_AWQMS_Qry will only pull water data from a select set of monloc types and no rejected data
-source("NPDES_AWQMSQuery.R")
 #function to combine characteristic name and sample fraction for metals
 source("NameandFraction.R")
 #function to calculate hardness from Ca and Mg, or conductivity
@@ -45,8 +44,8 @@ if(!file.exists("query_cache.RData") |
    difftime(Sys.Date() ,file.mtime("query_cache.RData") , units = c("days")) > 14){
   
 
-#NPDES_AWQMS_Stations functions only pulls stations of interest to NPDES program
-station <- NPDES_AWQMS_Stations()
+#get station info
+station <- query_stations(state=c("OR","PACIFIC OCEAN"))
 Mtype<-station$MonLocType
 auid<-station$AU_ID
 auid<-base::sort(station$AU_ID)
@@ -219,8 +218,7 @@ ui <- fluidPage(
                            h5("To find relevant ambient data for a permittee, use the Integrated Report Map to find the Assessment Unit a permittee discharges into and the next 
                               Assessment Unit upstream. Include both of these in the 'Select Assessment Unit' box. Set the 'Select Start Date' to 10 years ago. 
                               Note that data older than 10 years is generally not used for NPDES permit renewal or issuance purposes."),
-                           h5("The data pull will not include any quality control data (e.g. duplicates, blanks) or any data that has been rejected due to quality control issues,
-                              The data pull does include data that has been estimated due to quality control issues"),
+                           h5("The data pull will not include any quality control data (e.g. duplicates, blanks)"),
                            tags$br(),
                            h5("Warning: after running the query, if you change your mind about whether to include the map, 
                               you must select the box to add the map (underneath the 'run query' button) and then re run the query to ensure that the map will be 
@@ -337,9 +335,23 @@ server <- function(input, output, session) {
       one<-c(input$oneoff)
       rchar<-c(gch,one)
       
-      #query the data
-      dat<-NPDES_AWQMS_Qry(startdate=toString(sprintf("%s",input$startd)),toString(sprintf("%s",input$endd)),station=c(input$monlocs),montype=c(input$montype),
-                  char=rchar,org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID))
+      #if not monitoring locations types are selected, then need to subset types so we don't get a bunch of stuff that is irrelevant
+      mon<-ifelse(is.null(input$montype),c('BEACH Program Site-Ocean','BEACH Program Site-River/Stream', 'BEACH Program Site-Estuary',
+            'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
+            'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
+            'River/Stream Perennial','Facility Public Water Supply (PWS)'),input$montype)
+      
+      #query the data, doesn't pull data that is blank, or quality control data 
+      #currently commenting out search by montype until Travis P fixes AWQMS_Data
+      dat<-AWQMS_Data(startdate=toString(sprintf("%s",input$startd)),
+                      enddate=toString(sprintf("%s",input$endd)),
+                      MLocID=c(input$monlocs),
+                      #montype=mon,
+                      Char_Name=rchar,
+                      OrganizationID=c(input$orgs),
+                      HUC8_Name=c(input$huc8_nms), 
+                      AU_ID=c(input$AUID),
+                      filterQC=TRUE)
    
    
    #remove summary stats that are not 7 day avg, also check for and remove non-UTF8 characteristics from result_comment column
@@ -380,9 +392,13 @@ server <- function(input, output, session) {
       one<-c(input$oneoff)
       rchar<-c(gch,one)
       
-   dat<-AWQMS_Data_Cont(startdate=toString(sprintf("%s",input$startd)),toString(sprintf("%s",input$endd)),
-                        station=c(input$monlocs),char=rchar,
-                        org=c(input$orgs),HUC8_Name=c(input$huc8_nms), AU_ID=c(input$AUID), 
+        
+    dat<-AWQMS_Data_Cont(startdate=toString(sprintf("%s",input$startd)),enddate=toString(sprintf("%s",input$endd)),
+                        MLocID=c(input$monlocs),
+                        Char_Name=rchar,
+                        OrganizationID=c(input$orgs), 
+                        HUC8_Name=c(input$huc8_nms), 
+                        AU_ID=c(input$AUID), 
                         Result_Status=c("Accepted","Final","Validated","Preliminary","Provisional"))
    
    #remove non-UTF8 characteristics from comments column
