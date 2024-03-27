@@ -439,7 +439,7 @@ server <- function(input, output, session) {
    
    #take data, make a subtable for DOWNLOAD so that we only show the desired columns from the AWQMS data pull and in the desired order
    dsub<-eventReactive(input$goButton,{
-     dsub<-select(data(),OrganizationID,Org_Name,Project1,act_id,StationDes,MLocID,MonLocType,Lat_DD,Long_DD,AU_ID,
+     dsub<-select(data(),OrganizationID,org_name,Project1,act_id,StationDes,MLocID,MonLocType,Lat_DD,Long_DD,AU_ID,
                   SampleStartDate,SampleStartTime,SampleMedia,SampleSubmedia,Activity_Type,Statistical_Base,Time_Basis,Char_Name,Char_Speciation,
                  Sample_Fraction,CASNumber,Result_Text,Result_Unit,Analytical_method,Method_Code,Method_Context,Analytical_Lab,
                  MDLType,MDLValue,MDLUnit,MRLType,MRLValue,MRLUnit,
