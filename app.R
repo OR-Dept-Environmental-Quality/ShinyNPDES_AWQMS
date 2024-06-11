@@ -45,7 +45,20 @@ if(!file.exists("query_cache.RData") |
   
 
 #get station info
-station <- query_stations(state=c("OR","PACIFIC OCEAN"))
+station <- AWQMS_Stations(HUC8_Name=c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork', 'Brownlee Reservoir', 'Bully', 'Burnt', 'Chetco',
+                          'Chief Joseph','Clackamas', 'Coast Fork Willamette', 'Coos','Coquille', 'Crooked-Rattlesnake',  
+                          'Donner und Blitzen',' Goose Lake', 'Guano', 'Harney-Malheur Lakes', 'Illinois', 'Imnaha', 'Jordan',
+                          'Lake Abert', 'Little Deschutes','Lost', 'Lower Columbia', 'Lower Columbia-Clatskanie', 'Lower Columbia-Sandy',
+                          'Lower Crooked','Lower Deschutes', 'Lower Grande Ronde', 'Lower John Day', 'Lower Malheur', 'Lower Owyhee',
+                          'Lower Rogue', 'Lower Willamette', 'Mckenzie', 'Middle Columbia-Hood', 'Middle Columbia-Lake Wallula', 
+                          'Middle Fork John Day', 'Middle Fork Willamette', 'Middle Owyhee','Middle Rogue', 'Middle Snake-Payette', 
+                          'Middle Snake-Succor', 'Middle Willamette', 'Molalla-Pudding','Necanicum', 'Nehalem', 'North Fork John Day', 
+                          'North Santiam', 'North Umpqua', 'Not Loaded', 'Powder','Siletz-Yaquina', 'Siltcoos', 'Silver', 'Silvies', 
+                          'Siuslaw', 'Sixes', 'Smith', 'South Fork Owyhee', 'South Santiam','South Umpqua', 'Sprague', 'Summer Lake', 
+                          'Trout', 'Tualatin', 'Umatilla', 'Umpqua', 'Upper Columbia-Entiat','Upper Columbia-Priest Rapids', 
+                          'Upper Crooked', 'Upper Deschutes', 'Upper Grande Ronde,Upper John Day','Upper Klamath', 'Upper Klamath Lake', 
+                          'Upper Malheur', 'Upper Quinn', 'Upper Rogue', 'Upper Willamette','Walla Walla', 'Wallowa', 'Warner Lakes', 
+                          'Williamson', 'Willow', 'Wilson-Trusk-Nestuccu', 'Yamhill'))
 Mtype<-station$MonLocType
 auid<-station$AU_ID
 auid<-base::sort(station$AU_ID)
@@ -65,9 +78,9 @@ save(station, Mtype, auid, organization, file = 'query_cache.RData')
 # Check to see if saved cache of data exists. If it does not, or is greater than
 # 6 months old, query out all characteristics and save the cache
 if(!file.exists("query_cache_allchar.RData") | 
-   difftime(Sys.Date() ,file.mtime("query_cache_allchar.RData") , units = c("days")) > 182){
+  difftime(Sys.Date() ,file.mtime("query_cache_allchar.RData") , units = c("days")) > 182){
   
-  allchar<-AWQMS_Chars()
+ allchar<-AWQMS_Chars()
   
   #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
   save(allchar, file = 'query_cache_allchar.RData')
@@ -335,7 +348,7 @@ server <- function(input, output, session) {
       one<-c(input$oneoff)
       rchar<-c(gch,one)
       
-      #if not monitoring locations types are selected, then need to subset types so we don't get a bunch of stuff that is irrelevant
+      #if no monitoring locations types are selected, then need to subset types so we don't get a bunch of stuff that is irrelevant
       mon<-ifelse(is.null(input$montype),c('BEACH Program Site-Ocean','BEACH Program Site-River/Stream', 'BEACH Program Site-Estuary',
             'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
             'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
