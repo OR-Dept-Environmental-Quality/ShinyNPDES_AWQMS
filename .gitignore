@@ -3,3 +3,5 @@
 .RData
 .Ruserdata
 query_cache.RData
+.Renviron
+
