@@ -88,6 +88,7 @@ if(!file.exists("query_cache_allchar.RData") |
   load("query_cache_allchar.RData")
 }
 
+#get characteristics into format that is easier to use by app
 list<-split(allchar,seq(nrow(allchar)))
 oneoff<-unlist(list,use.names=FALSE)
 
@@ -283,7 +284,7 @@ server <- function(input, output, session) {
    
    #Copper and Aluminum BLM
    cuB<-c("Alkalinity, total","Calcium","Chloride","Copper","Magnesium","pH","Potassium","Sodium","Sulfate","Organic carbon",
-          "Temperature, water","Total Sulfate","Sulfide","Conductivity","Specific conductance", "Aluminum")
+          "Temperature, water","Total Sulfate","Sulfide","Conductivity","Specific conductance", "Aluminum","Total hardness","Hardness, Ca, Mg")
    
    #Dissolved Oxygen RPA
    dorpa<-c("Dissolved oxygen (DO)","Dissolved oxygen saturation","Biochemical oxygen demand, non-standard conditions",
