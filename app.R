@@ -331,7 +331,7 @@ server <- function(input, output, session) {
    
    #all toxics (metals, voc, acid extractable, base neutral, pesticides and PCBs) - and "other parameters with state WQ crit" 
    tox<-c(metalsrpa,vocrpa,aext,bneut,pestrpa, "N-Nitrosodiethylamine","Phosphorus","Asbestos","Barium","Manganese","Hydrogen sulfide","Silvex",
-          "2,4-D","2,3,7,8-Tetrachlorodibenzo-p-dioxin","N-Nitrosodi-n-butylamine","N-Nitrosopyrrolidine")
+          "2,4-D","2,3,7,8-Tetrachlorodibenzo-p-dioxin","N-Nitrosodi-n-butylamine","N-Nitrosopyrrolidine","Chloride")
    
    #isolate data so that you have to click a button so that it runs the query using eventReactive.
    
