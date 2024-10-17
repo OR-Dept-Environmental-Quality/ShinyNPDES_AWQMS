@@ -361,7 +361,7 @@ server <- function(input, output, session) {
       dat<-AWQMS_Data(startdate=toString(sprintf("%s",input$startd)),
                       enddate=toString(sprintf("%s",input$endd)),
                       MLocID=c(input$monlocs),
-                      #montype=mon,
+                      MonLocType=mon,
                       Char_Name=rchar,
                       OrganizationID=c(input$orgs),
                       HUC8_Name=c(input$huc8_nms), 
