@@ -15,6 +15,7 @@ library(shinybusy)
 library(openxlsx)
 library(tidyverse)
 library(DT)
+library(stringi)
 
 
 #Run this if you need to update the AWQMSdata package
@@ -351,13 +352,12 @@ server <- function(input, output, session) {
       rchar<-c(gch,one)
       
       #if no monitoring locations types are selected, then need to subset types so we don't get a bunch of stuff that is irrelevant
-      mon<-ifelse(is.null(input$montype),c('BEACH Program Site-Ocean','BEACH Program Site-River/Stream', 'BEACH Program Site-Estuary',
+      mon<-ifelse(stri_isempty(input$montype),c('BEACH Program Site-Ocean','BEACH Program Site-River/Stream', 'BEACH Program Site-Estuary',
             'Canal Drainage','Canal Irrigation','Canal Transport','Estuary','Facility Industrial',
             'Facility Municipal Sewage (POTW)','Facility Other','Lake','Ocean','Reservoir','River/Stream',
             'River/Stream Perennial','Facility Public Water Supply (PWS)'),input$montype)
       
       #query the data, doesn't pull data that is blank, or quality control data 
-      #currently commenting out search by montype until Travis P fixes AWQMS_Data
       dat<-AWQMS_Data(startdate=toString(sprintf("%s",input$startd)),
                       enddate=toString(sprintf("%s",input$endd)),
                       MLocID=c(input$monlocs),
