@@ -570,10 +570,10 @@ server <- function(input, output, session) {
      #get list of char names in RPA
      names<-base::unique(rpa$Char_Name)
      #remove alkalinity and hardness, those needs to stay as mg/l
-     names<-names[!(names %in% c("Alkalinity, total","Hardness, Ca, Mg"))]
+     names<-names[!(names %in% c("Alkalinity, total","Hardness, Ca, Mg","Total hardness"))]
      
      #make sure hardness and alkalinity are in mg/l (occasionally is in ug/l)
-     rpa<-unit_conv(rpa,c("Alkalinity, total","Hardness, Ca, Mg"),"ug/l",'mg/l')
+     rpa<-unit_conv(rpa,c("Alkalinity, total","Hardness, Ca, Mg", "Total hardness"),"ug/l",'mg/l')
      
      #convert everything else to ug/l
      rpa<-unit_conv(rpa,names,"mg/l","ug/l")
