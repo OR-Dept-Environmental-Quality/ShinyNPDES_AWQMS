@@ -16,6 +16,8 @@ library(openxlsx)
 library(tidyverse)
 library(DT)
 library(stringi)
+library(odbc)
+library(DBI)
 
 
 #Run this if you need to update the AWQMSdata package
@@ -32,6 +34,8 @@ source("CalcHardness_Function.R")
 source("AlBLM_Transform.R")
 #function to calculate summary stats from continuous data
 source("Continuous_Summary_Function.R")
+#function that changed all of the AWQMSdata functions into ones that might work with RConnect
+source("noenvAWQMSFunctions.R")
 
 #### Define Inputs for UI#####
 
@@ -46,7 +50,7 @@ if(!file.exists("query_cache.RData") |
   
 
 #get station info
-station <- AWQMS_Stations(HUC8_Name=c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork', 'Brownlee Reservoir', 'Bully', 'Burnt', 'Chetco',
+station <- noenvAWQMS_Stations(HUC8_Name=c('Alsea', 'Alvord Lake', 'Applegate', 'Beaver-South Fork', 'Brownlee Reservoir', 'Bully', 'Burnt', 'Chetco',
                           'Chief Joseph','Clackamas', 'Coast Fork Willamette', 'Coos','Coquille', 'Crooked-Rattlesnake',  
                           'Donner und Blitzen',' Goose Lake', 'Guano', 'Harney-Malheur Lakes', 'Illinois', 'Imnaha', 'Jordan',
                           'Lake Abert', 'Little Deschutes','Lost', 'Lower Columbia', 'Lower Columbia-Clatskanie', 'Lower Columbia-Sandy',
@@ -66,7 +70,7 @@ auid<-base::sort(station$AU_ID)
 station <- station$MLocID
 station <- base::sort(station)
 
-organization <- AWQMS_Orgs()
+organization <- noenvAWQMS_Orgs()
 organization <- organization$OrganizationID
 organization <- base::sort(organization)
 
@@ -81,7 +85,7 @@ save(station, Mtype, auid, organization, file = 'query_cache.RData')
 if(!file.exists("query_cache_allchar.RData") | 
   difftime(Sys.Date() ,file.mtime("query_cache_allchar.RData") , units = c("days")) > 182){
   
- allchar<-AWQMS_Chars()
+ allchar<-noenvAWQMS_Chars()
   
   #save query information in a file. Don't have to redo pulls each time. Saves a lot of time. 
   save(allchar, file = 'query_cache_allchar.RData')
@@ -358,7 +362,7 @@ server <- function(input, output, session) {
             'River/Stream Perennial','Facility Public Water Supply (PWS)'),input$montype)
       
       #query the data, doesn't pull data that is blank, or quality control data 
-      dat<-AWQMS_Data(startdate=toString(sprintf("%s",input$startd)),
+      dat<-noenvAWQMS_Data(startdate=toString(sprintf("%s",input$startd)),
                       enddate=toString(sprintf("%s",input$endd)),
                       MLocID=c(input$monlocs),
                       MonLocType=mon,
@@ -408,7 +412,7 @@ server <- function(input, output, session) {
       rchar<-c(gch,one)
       
         
-    dat<-AWQMS_Data_Cont(startdate=toString(sprintf("%s",input$startd)),enddate=toString(sprintf("%s",input$endd)),
+    dat<-noenvAWQMS_Data_Cont(startdate=toString(sprintf("%s",input$startd)),enddate=toString(sprintf("%s",input$endd)),
                         MLocID=c(input$monlocs),
                         Char_Name=rchar,
                         OrganizationID=c(input$orgs), 
