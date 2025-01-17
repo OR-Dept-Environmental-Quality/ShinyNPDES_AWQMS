@@ -6,6 +6,7 @@ function (project = NULL, MLocID = NULL)
   con <- DBI::dbConnect(odbc::odbc(), 
                         Driver   =  Sys.getenv('DRIVER'),
                         Server   =  Sys.getenv('AWQMS_SERVER'),
+                        Database =  Sys.getenv('AWQMS_Database'),
                         UID      =  Sys.getenv('AWQMS_usr'),
                         PWD      =  Sys.getenv('AWQMS_pass'))
   
@@ -34,6 +35,7 @@ function (project = NULL, MLocID = NULL)
   con <- DBI::dbConnect(odbc::odbc(), 
                         Driver   =  Sys.getenv('DRIVER'),
                         Server   =  Sys.getenv('AWQMS_SERVER'),
+                        Database =  Sys.getenv('AWQMS_Database'),
                         UID      =  Sys.getenv('AWQMS_usr'),
                         PWD      =  Sys.getenv('AWQMS_pass'))
   
@@ -65,7 +67,9 @@ function (project = NULL, MonLocType = NULL, Char_Name = NULL,
     station_con <- DBI::dbConnect(odbc::odbc(),
                                   Driver = Sys.getenv('DRIVER'),
                                   Server = Sys.getenv('STATIONS_SERVER'),
-                                  Database = Sys.getenv('STATIONS_Database'))
+                                  Database = Sys.getenv('STATIONS_Database'),
+                                  UID    = Sys.getenv('STATIONS_usr'),
+                                  PWD    = Sys.getenv('STATIONS_pass'))
     
     stations_filter <- dplyr::select(dplyr::tbl(station_con, 
                                                 "VWStationsFinal"), MLocID, StationDes, GNIS_Name, 
@@ -108,6 +112,7 @@ function (project = NULL, MonLocType = NULL, Char_Name = NULL,
   con <- DBI::dbConnect(odbc::odbc(), 
                         Driver   =  Sys.getenv('DRIVER'),
                         Server   =  Sys.getenv('AWQMS_SERVER'),
+                        Database =  Sys.getenv('AWQMS_Database'),
                         UID      =  Sys.getenv('AWQMS_usr'),
                         PWD      =  Sys.getenv('AWQMS_pass'))
   
@@ -168,7 +173,9 @@ function (project = NULL, MonLocType = NULL, Char_Name = NULL,
       station_con <- DBI::dbConnect(odbc::odbc(),
                                     Driver = Sys.getenv('DRIVER'),
                                     Server = Sys.getenv('STATIONS_SERVER'),
-                                    Database =Sys.getenv('STATIONS_Database'))
+                                    Database =Sys.getenv('STATIONS_Database'),
+                                    UID    = Sys.getenv('STATIONS_usr'),
+                                    PWD    = Sys.getenv('STATIONS_pass'))
       
       stations_filter <- dplyr::collect(dplyr::filter(dplyr::select(dplyr::tbl(station_con, 
                                                                                "VWStationsFinal"), MLocID, StationDes, GNIS_Name, 
@@ -219,7 +226,9 @@ function (startdate = "1949-09-15", enddate = NULL, MLocID = NULL,
     station_con <- DBI::dbConnect(odbc::odbc(),
                                   Driver = Sys.getenv('DRIVER'),
                                   Server = Sys.getenv('STATIONS_SERVER'),
-                                  Database =Sys.getenv('STATIONS_Database'))
+                                  Database =Sys.getenv('STATIONS_Database'),
+                                  UID    = Sys.getenv('STATIONS_usr'),
+                                  PWD    = Sys.getenv('STATIONS_pass'))
     
     stations_filter <- dplyr::select(dplyr::tbl(station_con, 
                                                 "VWStationsFinal"), MLocID, EcoRegion3, EcoRegion4, 
@@ -292,6 +301,7 @@ function (startdate = "1949-09-15", enddate = NULL, MLocID = NULL,
   con <- DBI::dbConnect(odbc::odbc(), 
                         Driver   =  Sys.getenv('DRIVER'),
                         Server   =  Sys.getenv('AWQMS_SERVER'),
+                        Database =  Sys.getenv('AWQMS_Database'),
                         UID      =  Sys.getenv('AWQMS_usr'),
                         PWD      =  Sys.getenv('AWQMS_pass'))
   
@@ -421,7 +431,9 @@ function (startdate = "1949-09-15", enddate = NULL, MLocID = NULL,
         station_con <- DBI::dbConnect(odbc::odbc(),
                                       Driver = Sys.getenv('DRIVER'),
                                       Server = Sys.getenv('STATIONS_SERVER'),
-                                      Database =Sys.getenv('STATIONS_Database'))
+                                      Database =Sys.getenv('STATIONS_Database'),
+                                      UID    = Sys.getenv('STATIONS_usr'),
+                                      PWD    = Sys.getenv('STATIONS_pass'))
         
         stations_filter <- dplyr::collect(dplyr::filter(dplyr::select(dplyr::tbl(station_con, 
                                                                                  "VWStationsFinal"), MLocID, EcoRegion3, EcoRegion4, 
@@ -460,7 +472,9 @@ function (startdate = NULL, enddate = NULL, MLocID = NULL, AU_ID = NULL,
     station_con <- DBI::dbConnect(odbc::odbc(),
                                   Driver = Sys.getenv('DRIVER'),
                                   Server = Sys.getenv('STATIONS_SERVER'),
-                                  Database =Sys.getenv('STATIONS_Database'))
+                                  Database =Sys.getenv('STATIONS_Database'),
+                                  UID    = Sys.getenv('STATIONS_usr'),
+                                  PWD    = Sys.getenv('STATIONS_pass'))
     
     stations_filter <- dplyr::select(dplyr::tbl(station_con, 
                                                 "VWStationsFinal"), MLocID, StationDes, Lat_DD, Long_DD, 
@@ -526,6 +540,7 @@ function (startdate = NULL, enddate = NULL, MLocID = NULL, AU_ID = NULL,
   con <- DBI::dbConnect(odbc::odbc(), 
                         Driver   =  Sys.getenv('DRIVER'),
                         Server   =  Sys.getenv('AWQMS_SERVER'),
+                        Database =  Sys.getenv('AWQMS_Database'),
                         UID      =  Sys.getenv('AWQMS_usr'),
                         PWD      =  Sys.getenv('AWQMS_pass'))
   
@@ -612,7 +627,9 @@ function (startdate = NULL, enddate = NULL, MLocID = NULL, AU_ID = NULL,
       station_con <- DBI::dbConnect(odbc::odbc(),
                                     Driver = Sys.getenv('DRIVER'),
                                     Server = Sys.getenv('STATIONS_SERVER'),
-                                    Database =Sys.getenv('STATIONS_Database'))
+                                    Database =Sys.getenv('STATIONS_Database'),
+                                    UID    = Sys.getenv('STATIONS_usr'),
+                                    PWD    = Sys.getenv('STATIONS_pass'))
       
       stations_filter <- dplyr::collect(dplyr::filter(dplyr::select(dplyr::tbl(station_con, 
                                                                                "VWStationsFinal"), MLocID, StationDes, Lat_DD, 
