@@ -18,6 +18,7 @@ library(DT)
 library(stringi)
 library(odbc)
 library(DBI)
+library(webshot)
 
 
 #Run this if you need to update the AWQMSdata package
