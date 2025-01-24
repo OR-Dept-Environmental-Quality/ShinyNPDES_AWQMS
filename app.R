@@ -19,6 +19,7 @@ library(stringi)
 library(odbc)
 library(DBI)
 library(webshot)
+webshot::install_phantomjs()
 
 
 #Run this if you need to update the AWQMSdata package
