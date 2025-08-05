@@ -1,6 +1,6 @@
 #
 # This is a Shiny web application. You can run the application by clicking the 'Run App' button above.
-# This app, based on a modified verison of the AWQMSdata_ShinyHelp app built by Travis Pritchard, 
+# This app, based on a modified version of the AWQMSdata_ShinyHelp app built by Travis Pritchard, 
 ##is designed to pull out RPA related data from AWQMS and put it into a table for use in RPA analysis
 
 library(shiny)
@@ -19,7 +19,10 @@ library(stringi)
 library(odbc)
 library(DBI)
 library(webshot)
-webshot::install_phantomjs()
+webshot::install_phantomjs(force=TRUE)
+
+#ensure appropriate GDAL version is referenced in order to publish app on R Connect Server
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/data/gdal/lib64 /data/gdal/bin/gdal"
 
 
 #Run this if you need to update the AWQMSdata package
