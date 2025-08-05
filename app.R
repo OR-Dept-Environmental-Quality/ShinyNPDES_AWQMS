@@ -694,7 +694,7 @@ server <- function(input, output, session) {
               rpa$CASNumber)
      
      #free cyanide, have to add CAS # to match with RPA spreadsheet since AWQMS free cyanide parameter doesn't have CAS
-     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Cyanides amenable to chlorination (HCN & CN)"),
+     rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Cyanides amenable to chlorination (HCN & CN)","Cyanide, free"),
                            paste0("57125F"),
                            rpa$CASNumber)
      
