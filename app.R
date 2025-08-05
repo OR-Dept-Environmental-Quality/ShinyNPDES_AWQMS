@@ -325,7 +325,7 @@ server <- function(input, output, session) {
              "m-Dichlorobenzene","1,3-Dichloropropene","Acrylonitrile","trans-1,3-Dichloropropene","cis-1,3-Dichloropropene")
    
    #Metals and Hardness
-   metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
+   metalsrpa<-c("Cyanide","Cyanides amenable to chlorination (HCN & CN)","Cyanide, free","Aluminum","Iron","Lead","Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Arsenic, Inorganic",
                 "Beryllium","Cadmium","Chromium","Copper","Zinc","Selenium","Nitrate","Inorganic nitrogen (nitrate and nitrite)",
                 "Nitrate + Nitrite","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Total hardness","Hardness, Ca, Mg",
                 "Hardness, carbonate","Hardness, non-carbonate","Methylmercury(1+)")
