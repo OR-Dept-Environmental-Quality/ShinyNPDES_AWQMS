@@ -693,6 +693,15 @@ server <- function(input, output, session) {
               paste0(rpa$CASNumber,"T"),
               rpa$CASNumber)
      
+     #bioavailable
+     rpa$CASNumber<-
+       ifelse(rpa$Char_Name %in% c("Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
+                                   "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
+                                   "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)") &
+                (rpa$Sample_Fraction %in% "Bioavailable"),
+              paste0(rpa$CASNumber,"B"),
+              rpa$CASNumber)
+     
      #free cyanide, have to add CAS # to match with RPA spreadsheet since AWQMS free cyanide parameter doesn't have CAS
      rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Cyanides amenable to chlorination (HCN & CN)","Cyanide, free"),
                            paste0("57125F"),
