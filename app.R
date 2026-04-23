@@ -677,7 +677,7 @@ server <- function(input, output, session) {
      rpa<-rpa %>%
         mutate(SampleStartDate = ifelse(!(is.na(Multiple)),YearMonth,format(as.Date(SampleStartDate),"%m/%d/%Y")))
      
-     #add T, D, or I to CAS# for certain parameters (mostly metals, used RPA workbook to identify parameters) 
+     #add T, D,B, or I to CAS# for certain parameters (mostly metals, used RPA workbook to identify parameters) 
      #so that the RPA workbooks will recognize them
      
      #inorganic arsenic, have to add CAS # to match with RPA spreadsheet since AWQMS inorganic arsenic parameter doesn't have CAS
@@ -702,12 +702,20 @@ server <- function(input, output, session) {
               paste0(rpa$CASNumber,"T"),
               rpa$CASNumber)
      
+     #bioavailable
+     rpa$CASNumber<-
+       ifelse(rpa$Char_Name %in% c("Copper","Magnesium","Potassium","Sodium","Cyanide","Aluminum","Iron","Lead",
+                                   "Mercury","Nickel","Silver","Thallium","Antimony","Arsenic","Beryllium","Cadmium","Chromium",
+                                   "Zinc","Selenium","Chromium(III)","Chromium(VI)","Arsenic ion (3+)","Methylmercury(1+)") &
+                (rpa$Sample_Fraction %in% "Bioavailable"),
+              paste0(rpa$CASNumber,"B"),
+              rpa$CASNumber)
+     
      #free cyanide, have to add CAS # to match with RPA spreadsheet since AWQMS free cyanide parameter doesn't have CAS
      rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Cyanides amenable to chlorination (HCN & CN)","Cyanide, free"),
                            paste0("57125F"),
                            rpa$CASNumber)
      
-
      
      #hardness, add 'Hardness' to CAS so RPA tool has something to work with
      rpa$CASNumber<-ifelse(rpa$Char_Name %in% c("Total hardness","Hardness, Ca, Mg",
